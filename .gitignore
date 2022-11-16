@@ -1,5 +1,5 @@
 #slurm outputs
-./Notebooks/*.out
+Notebooks/*.out
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
