@@ -29,3 +29,20 @@ WARNING: no neutral loss information found in the library - assuming fragments w
 [0:01] Encoding peptides for spectra and RTs prediction
 [0:01] Predicting spectra and IMs
 Predictions generated:
+1398
+7269
+12751
+18112
+[0:19] Predicting RTs
+Predictions generated:
+1014
+6880
+12715
+[0:23] Decoding predicted spectra and IMs
+[0:24] Decoding RTs
+[0:24] Saving the library to /vast/scratch/users/bollands.c/DiaNNBenchmarking/repo-DiaNN-6-20221116142334//output/spectrallib.predicted.speclib
+[0:24] Initialising library
+
+[0:24] First pass: generating a spectral library from DIA data
+[0:24] File #1/10
+[0:24] Loading run /vast/scratch/users/bollands.c/DiaNNBenchmarking/repo-DiaNN-6-20221116142334/P4025_15min_B2_1_1_5895.d
