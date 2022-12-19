@@ -1,2 +1,2 @@
-# 202203-BenchmarkingFramework
-Repository for Benchmarking Framework
+# Tool Parametriser
+A tool to make benchmarking and parametrising HPC tools easier and streamlined.
