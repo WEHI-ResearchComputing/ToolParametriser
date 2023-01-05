@@ -1,4 +1,12 @@
-class Job(ABC):
+from abc import ABC, abstractmethod
+import csv
+import os
+import shutil
+import xml.etree.ElementTree as ET
+
+import glob
+
+class BMJob(ABC):
     """
     The Job interface declares the operations that all concrete jobs
     must implement.
@@ -32,7 +40,7 @@ class Job(ABC):
 """
 Concrete Jobs provide various implementations of the Job interface.
 """
-class AbstractJob(Job):
+class AbstractJob(BMJob):
     def __init__(
         self,
         BenchmarkingCSVFile_path,
