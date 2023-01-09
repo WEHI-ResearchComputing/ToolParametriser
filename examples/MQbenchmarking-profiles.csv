@@ -1,0 +1,2 @@
+partition,type,job-name,NumFiles,cpus-per-task,mem,threads,timelimit
+regular,lib,MQ-1,2,10,40,2,4:00:00
