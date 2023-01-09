@@ -43,22 +43,22 @@ Concrete Jobs provide various implementations of the Job interface.
 class AbstractJob(BMJob):
     def __init__(
         self,
-        BenchmarkingCSVFile_path,
-        InputFiles_path,
-        storage_path,
-        Number_of_jobs_repetition,
+        profiles_path,
+        input_path,
+        output_path,
+        num_of_reps,
     ):
-        self.csvfile = BenchmarkingCSVFile_path
-        self.path = InputFiles_path
-        self.src = storage_path
-        self.dest = Number_of_jobs_repetition
+        self.profiles_path = profiles_path
+        self.input_path = input_path
+        self.output_path = output_path
+        self.num_of_reps = num_of_reps
 
     def readBenchmarkingProfiles(self) -> list:
         job_parameters = []
 
-        with open(self.csvfile, "r") as file:
-            csv_file = csv.DictReader(file)
-            for row in csv_file:
+        with open(self.profiles_path, "r") as file:
+            profiles_path = csv.DictReader(file)
+            for row in profiles_path:
                 job_parameters.append(dict(row))
 
         return job_parameters
@@ -85,28 +85,28 @@ class AbstractJob(BMJob):
 class MaxQuantJob(AbstractJob):
     def __init__(
         self,
-        BenchmarkingCSVFile_path,
-        InputFiles_path,
-        storage_path,
-        Number_of_jobs_repetition,
+        profiles_path,
+        input_path,
+        output_path,
+        num_of_reps,
 
     ):
         super().__init__(
-            BenchmarkingCSVFile_path,
-            InputFiles_path,
-            storage_path,
-            Number_of_jobs_repetition,
+            profiles_path,
+            input_path,
+            output_path,
+            num_of_reps,
         )
         # TODO: Variables needs to be initialize 
         # self.sample_files = sample_files
         # self.xml_file_path = xml_file_path
         # self.numthreads = numthreads
 
-    def createExecutableBatchFile(self, job_parameters, path, ExecutionID) -> None:
-        with open(f"{path}{job_parameters['job-name']}_batch.sh", "w+") as fb:
+    def createExecutableBatchFile(self, job_parameters, path, ExecutionID,specificInputFiles=None) -> None:
+        with open(os.path.join(path,f"{job_parameters['job-name']}_batch.sh"), "w+") as fb:
             fb.writelines("#!/bin/bash\n")
             fb.writelines(f"#SBATCH -p {job_parameters['partition']}\n")
-            fb.writelines(f"#SBATCH --qos=regular_partitiontimelimit\n")
+            #fb.writelines(f"#SBATCH --qos=regular_partitiontimelimit\n")
             fb.writelines(f"#SBATCH --job-name={job_parameters['job-name']}\n")
             fb.writelines(f"#SBATCH --ntasks=1\n")
             fb.writelines(f"#SBATCH --time={job_parameters['timelimit']}\n")
@@ -114,31 +114,21 @@ class MaxQuantJob(AbstractJob):
                 f"#SBATCH --cpus-per-task={job_parameters['cpus-per-task']}\n"
             )
             fb.writelines(f"#SBATCH --mem={job_parameters['mem']}G\n")
-            fb.writelines(f"#SBATCH --output={path}slurm-%j.out\n")
+            fb.writelines(f"#SBATCH --output=slurm-%j.out\n")
             fb.writelines(f"#SBATCH --mail-type=ALL,ARRAY_TASKS\n")
             fb.writelines(f"#SBATCH --mail-user=bollands.c@wehi.edu.au\n")
 
             fb.writelines(f"module load MaxQuant/2.0.2.0\n")
-            fb.writelines(f"module load python/3.8.8\n")
 
-            fb.writelines(
-                f"MaxQuant {path}mqpar.xml --changeFolder {path}mqpar.post.xml {path} {path}\n"
-            )
+            fb.writelines(f"/stornext/System/data/apps/rc-tools/rc-tools-1.0/bin/tools/MQ/createMQXML.py {job_parameters['threads']}\n")
 
-            fb.writelines(f"MaxQuant {path}mqpar.post.xml\n")
-
-            fb.writelines(
-                f"find {path} -maxdepth 1 -mindepth 1 -type f -not -regex '.*\.\(fasta\|xml\|out\|raw\|sh\)' -delete\n"
-            )
-            fb.writelines(
-                f"find {path} -maxdepth 1 -mindepth 1 -type d -not -regex '.*\.\(d\)' -exec rm -rf '{{}}' \;\n"
-            )
+            fb.writelines(f"MaxQuant mqpar.mod.xml\n")
 
             fb.writelines(
                 f'echo ""$SLURM_ARRAY_JOB_ID","$SLURM_ARRAY_TASK_ID"",{job_parameters["partition"]},{job_parameters["type"]},{job_parameters["job-name"]},{job_parameters["NumFiles"]},{job_parameters["cpus-per-task"]},{job_parameters["mem"]},{job_parameters["threads"]},{job_parameters["timelimit"]} >> jobs_executed_{ExecutionID}.txt\n'
             )
 
-        os.system(f"sbatch {path}{job_parameters['job-name']}_batch.sh")
+        os.system(f"cd {path}; sbatch {path}{job_parameters['job-name']}_batch.sh")
 
     def updateXmlFile(self, sample_files, xml_file_path, numthreads) -> None:
         tree = ET.parse(xml_file_path)
@@ -159,24 +149,42 @@ class MaxQuantJob(AbstractJob):
 
         outputfile = xml_file_path
         tree.write(outputfile)
+    
+    def identifySpecificInputFiles(self) -> dict:        
+        # Extract the list of Input filenames: .Fasta, .tsv and .d
+        # Create a Dictionary to store Input Files Orderly
+        MaxQuantInputFiles = {}
+        MaxQuantInputFiles["original_files"] = glob.glob(os.path.join(self.input_path, "*.d"), recursive=False)
+        MaxQuantInputFiles["fasta_file"] = glob.glob(os.path.join(self.input_path, "*.fasta"), recursive=False)[0]
+        MaxQuantInputFiles["xml_file"] = glob.glob(os.path.join(self.input_path, "*.xml"), recursive=False)[0]
+            
+        return MaxQuantInputFiles
 
+    def copySpecificInputFiles(self,specificInputFiles, running_job_path) -> None:
+        
+        # Copy Fasta & XML File
+        self.copyInputFiles(specificInputFiles["fasta_file"], running_job_path)
+        self.copyInputFiles(specificInputFiles["xml_file"], running_job_path)
+
+                
+        
 
 class DiaNNJob(AbstractJob):
    
     def __init__(
         self,
-        BenchmarkingCSVFile_path,
-        InputFiles_path,
-        storage_path,
-        Number_of_jobs_repetition,
+        profiles_path,
+        input_path,
+        output_path,
+        num_of_reps,
+
     ):
         super().__init__(
-            BenchmarkingCSVFile_path,
-            InputFiles_path,
-            storage_path,
-            Number_of_jobs_repetition,
+            profiles_path,
+            input_path,
+            output_path,
+            num_of_reps,
         )
-    
     def identifySpecificInputFiles(self) -> dict:
         print("in DiaNNJob indenfiyspecificinpoutfiles")
         # Extract the list of Input filenames: .Fasta, .tsv and .d
@@ -187,12 +195,12 @@ class DiaNNJob(AbstractJob):
         # Create a Dictionary to store Input Files Orderly
         DiaNNSpecificInputFiles = {}
         DiaNNSpecificInputFiles["original_files"] = original_files
-        DiaNNSpecificInputFiles["fasta_file"] = glob.glob(os.path.join(self.path, "*.fasta"), recursive=False
+        DiaNNSpecificInputFiles["fasta_file"] = glob.glob(os.path.join(self.input_path, "*.fasta"), recursive=False
         )[0]
         
 
         if glob.glob(os.path.join(self.path, "*.tsv"), recursive=False):
-            DiaNNSpecificInputFiles["tsv_file"] = glob.glob(os.path.join(self.path, "*.tsv"), recursive=False)[0]
+            DiaNNSpecificInputFiles["tsv_file"] = glob.glob(os.path.join(self.input_path, "*.tsv"), recursive=False)[0]
         else:
             DiaNNSpecificInputFiles["tsv_file"] = None
             
@@ -209,7 +217,6 @@ class DiaNNJob(AbstractJob):
     def createExecutableBatchFile(
         self, job_parameters, path, specificInputFiles, ExecutionID
     ) -> None:
-        print("in DiaNNJob createexecutablebatchfile")
         os.system(f'(cd {path} ; DIANN_RUN_TYPE=""{job_parameters["type"]}"" DIANN_LIB=""{specificInputFiles["tsv_file"]}"" DIANN_TIME=""{job_parameters["timelimit"]}""  DIANN_CPUS=""{job_parameters["cpus-per-task"]}"" DIANN_MEM=""{job_parameters["mem"]}G"" DIANN_THREADS=""{job_parameters["threads"]} DIANN_OUTPUT_PATH=""{path}/output"" /stornext/System/data/apps/rc-tools/rc-tools-1.0/bin/tools/DiaNN/createdianncmd.sh)')
 
         with open(f"{path}diann.slurm", "a") as fb:
@@ -220,16 +227,17 @@ class GenericJob(AbstractJob):
     
     def __init__(
         self,
-        BenchmarkingCSVFile_path,
-        InputFiles_path,
-        storage_path,
-        Number_of_jobs_repetition,
+        profiles_path,
+        input_path,
+        output_path,
+        num_of_reps,
+
     ):
         super().__init__(
-            BenchmarkingCSVFile_path,
-            InputFiles_path,
-            storage_path,
-            Number_of_jobs_repetition,
+            profiles_path,
+            input_path,
+            output_path,
+            num_of_reps,
         )
         
     def identifySpecificInputFiles(self) -> dict:
@@ -240,7 +248,7 @@ class GenericJob(AbstractJob):
 #         if files_in_script == 2:
 #             print("2")
             file_type = input("What is the extension of the file you are trying to benchmark with? eg. .bam WITH THE '.' AT THE START")
-            original_files = glob.glob(os.path.join(self.path, f"*{file_type}"), recursive=False)
+            original_files = glob.glob(os.path.join(self.input_path, f"*{file_type}"), recursive=False)
             print(original_files)
         
 #             print(self.path)
