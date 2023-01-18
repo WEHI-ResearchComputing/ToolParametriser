@@ -27,10 +27,10 @@ class AbstractTester(ABC):
         try:
             with open(self.Config['jobs']['params_path'], "r") as file:
                 self.Config["job_parameters"]=list(csv.DictReader(file))
-        except IOError as e:
-            if e.errno == errno.EACCES:
+        except IOError:
+            if IOError.errno == errno.EACCES:
                 logging.fatal("Test parameters file exists, but isn't readable")
-            elif e.errno == errno.ENOENT:
+            elif IOError.errno == errno.ENOENT:
                 logging.fatal("Test parameters file isn't readable because it isn't there")
     
     
@@ -57,22 +57,22 @@ class AbstractTester(ABC):
             for parameters in self.Config["job_parameters"]:
                 runID = f"repo-{parameters['job-name']}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
                 self.prepare_run_dir(runID=runID,params=parameters)
-                self.create_run(parameters)
+                self.create_run(runID,parameters)
         else:
             logging.fatal("Test Parameters file not valid.")
             raise InvalidTestParameters
 
     @abstractmethod
-    def create_run(self,parameters:dict):
+    def create_run(self,runID:str,parameters:dict):
         pass
 
 class MQTester(AbstractTester):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
     
-    def create_run(self,parameters):
+    def create_run(self,runID,parameters):
         print(parameters)
-        self.updateXmlFile(parameters)
+        self.update_xml(runID ,parameters)
         print("MQ created and run")
 
     def validate_config(self) -> bool:
@@ -85,14 +85,15 @@ class MQTester(AbstractTester):
     """
     Method specific to MQ, to update XML file
     """   
-    def update_xml(self,parameters:dict) -> None:
+    def update_xml(self,runID:str,parameters:dict) -> None:
         xml_path=next(item['path'] for item in self.Config["extra"] if item["name"] == "xml")
         if not os.path.exists(xml_path):
             logging.error(f"No xml file found.")
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), xml_path)
         else:
             tree = ET.parse(xml_path)
-            outputfile=os.path.join(runfile.split("/")[-1],"mqpar.mod.xml")
+            outputfile=os.path.join(self.Config["Output_path"],runID,"mqpar.mod.xml")
+            print(outputfile)
             root = tree.getroot()
 
             numfiles=0
