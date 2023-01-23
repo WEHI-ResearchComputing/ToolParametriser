@@ -1,4 +1,4 @@
-partition,type,job-name,NumFiles,cpus-per-task,mem,threads,timelimit
+partition,type,jobname,numfiles,cpuspertask,mem,threads,timelimit
 regular,lib,DiaNN-1,2,10,40,2,24:00:00
 regular,lib,DiaNN-2,2,12,80,8,24:00:00
 regular,lib,DiaNN-3,2,14,120,16,24:00:00

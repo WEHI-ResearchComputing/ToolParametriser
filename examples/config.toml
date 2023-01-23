@@ -15,3 +15,4 @@ path = "/vast/scratch/users/iskander.j/MQ"
 num_reps = 1 
 params_path = "/vast/scratch/users/iskander.j/ToolParametriser/examples/MQbenchmarking-profiles.csv" 
 tool_type="MQ"
+email="iskander.j@wehi.edu.au"

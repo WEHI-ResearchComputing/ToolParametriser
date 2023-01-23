@@ -1,0 +1,10 @@
+{
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.extraPaths": [
+        "./ToolParametriser"
+    ],
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": false,
+    "python.linting.pycodestyleEnabled": false,
+    "python.linting.mypyEnabled": false
+}
