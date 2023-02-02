@@ -1,0 +1,11 @@
+digraph "classes" {
+charset="utf-8"
+rankdir=BT
+"0" [label="{AbstractTester|Config\ltemplate_path\ltmplfile : str\l|create_jobscript_template()\lget_test_parameters()\lprepare_run_dir()\lrun()\lrun_jobscript()\lrun_test()\lvalidate_config()\lvalidate_test_parameters()\l}", shape="record"];
+"1" [label="{DiaNNTester|tmplfile\l|create_jobscript()\lcreate_jobscript_template()\l}", shape="record"];
+"2" [fontcolor="red", label="{InvalidConfigObject|message : str\l|}", shape="record"];
+"3" [fontcolor="red", label="{InvalidTestParameters|message : str\l|}", shape="record"];
+"4" [label="{MQTester|tmplfile\l|create_jobscript_template()\lrun()\lupdate_xml()\lvalidate_config()\l}", shape="record"];
+"1" -> "0" [arrowhead="empty", arrowtail="none"];
+"4" -> "0" [arrowhead="empty", arrowtail="none"];
+}
