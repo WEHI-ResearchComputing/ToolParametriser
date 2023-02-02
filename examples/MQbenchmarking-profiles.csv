@@ -1,3 +1,5 @@
-partition,type,jobname,numfiles,cpuspertask,mem,threads,timelimit
-regular,lib,MQ-1,2,2,1,2,4:00:00
-regular,lib,MQ-1,4,2,1,4,4:00:00
+partition,type,jobname,numfiles,cpuspertask,mem,threads,timelimit,constraint
+regular,lib,MQ-1,2,2,1,2,4:00:00,
+regular,lib,MQ-2,4,2,1,4,4:00:00,Skylake
+regular,lib,MQ-3,2,2,1,2,4:00:00,Broadwell
+regular,lib,MQ-4,4,2,1,4,4:00:00,Broadwell

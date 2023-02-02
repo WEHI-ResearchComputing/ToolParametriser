@@ -1,0 +1,18 @@
+[input]
+type="file"
+path = "/vast/projects/RCP/benchmarking/MQ/P4023_old/*.d"
+[[extra]]
+name="fasta"
+path="/vast/projects/RCP/benchmarking/MQ/P4023_old/Human_Proteome_reviewed_May2021.fasta"
+[[extra]]
+name="xml"
+path="/vast/projects/RCP/benchmarking/MQ/P4023_old/mqpar.xml"
+
+[output]
+path = "/vast/scratch/users/iskander.j/MQ" 
+
+[jobs]
+num_reps = 1 
+params_path = "/vast/scratch/users/iskander.j/ToolParametriser/examples/MQbenchmarking-profiles.csv" 
+tool_type="MQ"
+email="iskander.j@wehi.edu.au"
