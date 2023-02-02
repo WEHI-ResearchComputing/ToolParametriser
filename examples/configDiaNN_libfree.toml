@@ -1,0 +1,15 @@
+[input]
+type="dir"
+path = "/vast/projects/RCP/benchmarking/DiaNN/P4025*.d"
+[[extra]]
+name="fasta"
+path="/vast/projects/RCP/benchmarking/DiaNN/P4025/Human_Proteome_reviewed_May2021.fasta"
+
+[output]
+path = "/vast/scratch/users/iskander.j/Diann_lib" 
+
+[jobs]
+num_reps = 1 
+params_path = "/vast/scratch/users/iskander.j/ToolParametriser/examples/DiaNNbenchmarking-profiles.csv" 
+tool_type="DiaNN_libfree"
+email="iskander.j@wehi.edu.au"

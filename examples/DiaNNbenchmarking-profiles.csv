@@ -1,0 +1,3 @@
+partition,jobname,numfiles,cpuspertask,mem,threads,timelimit,constraint
+regular,D-1,3,2,1,2,4:00:00,Skylake
+
