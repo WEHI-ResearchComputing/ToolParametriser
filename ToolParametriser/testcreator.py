@@ -9,6 +9,7 @@ import xml.etree.ElementTree as ET
 class AbstractTester(ABC):
     def __init__(self,config:dict) -> None:
         super().__init__()
+        self.tmplfile="" #Must be set by concrete class
         self.Config=config
         if self.validate_config():
             self.Config["Output_path"] = config['output']['path']+"_"+datetime.now().strftime('%Y%m%d%H%M%S')
@@ -25,17 +26,57 @@ class AbstractTester(ABC):
     
         self.template_path=f"{os.path.expanduser('~')}/.toolparametriser/"
     
-    def create_jobscript_template(self):
+    @abstractmethod
+    def create_jobscript_template(self,**kwargs):
         pass
-
-    def create_jobscript(self)->bool:
+        
+    @abstractmethod
+    def run(self,runID:str,parameters:dict):
         pass
+    
+    def run_jobscript(self,parameters:dict,runID:str):
+        #Prepare values for tmpl
+        config=self.Config
+        ntasks=1
+        if 'ntasks'  in parameters.keys():
+            ntasks=parameters["ntasks"]
+        
+        params={
+            'partition': parameters["partition"], 
+            'type': parameters["type"], 
+            'jobname': parameters["jobname"], 
+            'numfiles': parameters["numfiles"], 
+            'cpuspertask': parameters["cpuspertask"], 
+            'mem': parameters["mem"], 
+            'threads': parameters["threads"], 
+            'timelimit':parameters["timelimit"],
+            'ntasks':ntasks,
+            'email':config["jobs"]["email"]
+        }
 
-        return True
+        params['constraint']=None
+        if 'constraint'  in parameters.keys():
+            params['constraint']=parameters['constraint']
+                
+        ##Substitute Tmpl 
+        with open(self.tmplfile, 'r') as f:
+            template = Template(f.read())
+            result = template.safe_substitute(params)
+        ##Save to file
+        with open(os.path.join(self.Config["Output_path"],runID,"batch.slurm"), 'w') as f:
+            f.write(result)
+        ##RUN
+        print(
+            os.system(f"cd {os.path.join(self.Config['Output_path'],runID)};"+ 
+                f"sbatch {os.path.join(self.Config['Output_path'],runID,'batch.slurm')}")
+            )
+
+    ##TODO validate_config
     def validate_config(self)->bool:
         print("Validated")
         return True
-    
+
+    ##TODO validate_test_parameters
     def validate_test_parameters(self)->bool:
         return True
 
@@ -67,86 +108,55 @@ class AbstractTester(ABC):
             shutil.copy(extrafile["path"],outpath)
 
     
-    def run_test(self):
+    def run_test(self,usetmpl:bool):
         self.get_test_parameters()
+
         if self.validate_test_parameters():
             for parameters in self.Config["job_parameters"]:
                 runID = f"repo-{parameters['jobname']}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
                 self.prepare_run_dir(runID=runID,params=parameters)
-                self.create_run(runID,parameters)
+                if (not os.path.exists(self.tmplfile)) or (not usetmpl):
+                    self.create_jobscript_template()
+                self.run(runID,parameters)
         else:
             logging.fatal("Test Parameters file not valid.")
             raise InvalidTestParameters
 
-    @abstractmethod
-    def create_run(self,runID:str,parameters:dict):
-        pass
+    
 
 class MQTester(AbstractTester):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
         self.tmplfile=os.path.join(self.template_path,"MQtemplate.tmpl")
     
-    def create_run(self,runID,parameters):
-        #self.update_xml(runID ,parameters)
-        self.create_run_jobscript(parameters,runID)
+    def run(self,runID,parameters):
+        self.update_xml(runID ,parameters)
+        self.run_jobscript(parameters,runID)
         print("MQ created and run")
 
     def create_jobscript_template(self):
+        print("Creating new tmpl")
         with open(self.tmplfile, "w+") as fb:
             fb.writelines("#!/bin/bash\n")
             fb.writelines("#SBATCH -p ${partition}\n")
             fb.writelines("#SBATCH --job-name=${jobname}\n")
             fb.writelines("#SBATCH --ntasks=${ntasks}\n")
             fb.writelines("#SBATCH --time=${timelimit}\n")
-            fb.writelines(
-                "#SBATCH --cpus-per-task=${cpuspertask}\n"
-            )
+            fb.writelines("#SBATCH --cpus-per-task=${cpuspertask}\n")
             fb.writelines("#SBATCH --mem=${mem}G\n")
             fb.writelines("#SBATCH --output=slurm-%j.out\n")
             fb.writelines("#SBATCH --mail-type=ALL,ARRAY_TASKS\n")
             fb.writelines("#SBATCH --mail-user=${email}\n")
+           
+            fb.writelines("#SBATCH --constraint=${constraint}\n")
 
             fb.writelines("module load MaxQuant/2.0.2.0\n")
-
             fb.writelines("/stornext/System/data/apps/rc-tools/rc-tools-1.0/bin/tools/MQ/createMQXML.py ${threads}\n")
-
             fb.writelines("MaxQuant mqpar.mod.xml\n")
 
             fb.writelines(
                 'echo \"$SLURM_ARRAY_JOB_ID,$SLURM_ARRAY_TASK_ID,${partition},${type},${jobname},${numfiles},${cpuspertask},${mem},${threads},${timelimit}\" >> '+f'{self.Config["Output_path"]}/jobs_executed.txt\n'
             )
-
-    def create_run_jobscript(self,parameters,runID):
-        config=self.Config
-        ntasks=1
-        if 'ntasks'  in parameters.keys():
-            ntasks=parameters["ntasks"]
-        
-        data={
-            'partition': parameters["partition"], 
-            'type': parameters["type"], 
-            'jobname': parameters["jobname"], 
-            'numfiles': parameters["numfiles"], 
-            'cpuspertask': parameters["cpuspertask"], 
-            'mem': parameters["mem"], 
-            'threads': parameters["threads"], 
-            'timelimit':parameters["timelimit"],
-            'ntasks':ntasks,
-            'email':config["jobs"]["email"]
-        }
-        
-        with open(self.tmplfile, 'r') as f:
-            template = Template(f.read())
-            result = template.safe_substitute(data)
-        with open(os.path.join(self.Config["Output_path"],runID,"batch.slurm"), 'w') as f:
-            f.write(result)
-        
-        print(
-            os.system(f"cd {os.path.join(self.Config['Output_path'],runID)};"+ 
-                f"sbatch {os.path.join(self.Config['Output_path'],runID,'batch.slurm')}")
-            )
-
 
     def validate_config(self) -> bool:
         valid = super().validate_config()
@@ -155,8 +165,9 @@ class MQTester(AbstractTester):
         if not self.Config["jobs"]["tool_type"]=="MQ":
             valid=False
         return valid
+
     """
-    Method specific to MQ, to update XML file
+    Method specific to MQ only, to update XML file
     """   
     def update_xml(self,runID:str,parameters:dict) -> None:
         xml_path=next(item['path'] for item in self.Config["extra"] if item["name"] == "xml")
@@ -208,4 +219,16 @@ class InvalidTestParameters(Exception):
     def __init__(self, message="Test Parameters file is not valid, or have missing fields. See logs in ~/.toolparametriser/"):
         self.message = message
         super().__init__(self.message)
-    
+
+class DiaNNTester(AbstractTester):
+    def __init__(self, config: dict) -> None:
+        super().__init__(config)
+        self.tmplfile=os.path.join(self.template_path,"DiaNNtemplate.tmpl")
+
+    def create_jobscript_template(self):
+        pass
+
+    def create_jobscript(self)->bool:
+        pass
+
+        return True
