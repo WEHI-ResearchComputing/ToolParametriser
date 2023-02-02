@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-import csv
+import csv,json
 import random,os
 import logging,glob,shutil,errno
 from string import Template
@@ -34,8 +34,7 @@ class AbstractTester(ABC):
     def run(self,runID:str,parameters:dict):
         pass
     
-    def run_jobscript(self,parameters:dict,runID:str):
-        #Prepare values for tmpl
+    def get_tmpl_values(self,parameters:dict)->dict:
         config=self.Config
         ntasks=1
         if 'ntasks'  in parameters.keys():
@@ -43,7 +42,6 @@ class AbstractTester(ABC):
         
         params={
             'partition': parameters["partition"], 
-            'type': parameters["type"], 
             'jobname': parameters["jobname"], 
             'numfiles': parameters["numfiles"], 
             'cpuspertask': parameters["cpuspertask"], 
@@ -57,6 +55,15 @@ class AbstractTester(ABC):
         params['constraint']=None
         if 'constraint'  in parameters.keys():
             params['constraint']=parameters['constraint']
+
+        if 'inputfiles'  in parameters.keys():
+            params['inputfiles']=parameters['inputfiles']
+
+        return params
+
+    def run_jobscript(self,parameters:dict,runID:str):
+        #Prepare values for tmpl
+        params=self.get_tmpl_values(parameters)
                 
         ##Substitute Tmpl 
         with open(self.tmplfile, 'r') as f:
@@ -73,7 +80,7 @@ class AbstractTester(ABC):
 
     ##TODO validate_config
     def validate_config(self)->bool:
-        print("Validated")
+
         return True
 
     ##TODO validate_test_parameters
@@ -118,6 +125,8 @@ class AbstractTester(ABC):
                 if (not os.path.exists(self.tmplfile)) or (not usetmpl):
                     self.create_jobscript_template()
                 self.run(runID,parameters)
+                with open(os.path.join(self.Config["Output_path"],'config.json'), 'w') as cfile:
+                    cfile.write(json.dumps(self.Config))
         else:
             logging.fatal("Test Parameters file not valid.")
             raise InvalidTestParameters
@@ -132,10 +141,10 @@ class MQTester(AbstractTester):
     def run(self,runID,parameters):
         self.update_xml(runID ,parameters)
         self.run_jobscript(parameters,runID)
-        print("MQ created and run")
+        logging.info("MQ created and run")
 
     def create_jobscript_template(self):
-        print("Creating new tmpl")
+        logging.info("Creating new tmpl")
         with open(self.tmplfile, "w+") as fb:
             fb.writelines("#!/bin/bash\n")
             fb.writelines("#SBATCH -p ${partition}\n")
@@ -155,7 +164,7 @@ class MQTester(AbstractTester):
             fb.writelines("MaxQuant mqpar.mod.xml\n")
 
             fb.writelines(
-                'echo \"$SLURM_ARRAY_JOB_ID,$SLURM_ARRAY_TASK_ID,${partition},${type},${jobname},${numfiles},${cpuspertask},${mem},${threads},${timelimit}\" >> '+f'{self.Config["Output_path"]}/jobs_executed.txt\n'
+                'echo \"$SLURM_ARRAY_JOB_ID,$SLURM_ARRAY_TASK_ID,${partition},${jobname},${numfiles},${cpuspertask},${mem},${threads},${timelimit}\" >> '+f'{self.Config["Output_path"]}/jobs_executed.txt\n'
             )
 
     def validate_config(self) -> bool:
@@ -224,11 +233,80 @@ class DiaNNTester(AbstractTester):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
         self.tmplfile=os.path.join(self.template_path,"DiaNNtemplate.tmpl")
+        self.inputfiles=[]
+
+    def validate_config(self) -> bool:
+        valid = super().validate_config()
+        if not any(d.get('name', "") == 'tsv' for d in self.Config["extra"]) or not any(d.get('name', "") == 'fasta' for d in self.Config["extra"]):
+            valid=False
+        if not self.Config["jobs"]["tool_type"]=="DiaNN":
+            valid=False
+        return valid
+
+    def run(self,runID,parameters):
+        parameters['inputfiles']=' --f '.join(self.get_input_files(runID=runID))
+        self.run_jobscript(parameters,runID)
+        print("DiaNN created and run")
 
     def create_jobscript_template(self):
-        pass
+        with open(self.tmplfile, "w+") as fb:
+            fb.writelines("#!/bin/bash\n")
+            fb.writelines("#SBATCH -p ${partition}\n")
+            fb.writelines("#SBATCH --job-name=${jobname}\n")
+            fb.writelines("#SBATCH --ntasks=${ntasks}\n")
+            fb.writelines("#SBATCH --time=${timelimit}\n")
+            fb.writelines("#SBATCH --cpus-per-task=${cpuspertask}\n")
+            fb.writelines("#SBATCH --mem=${mem}G\n")
+            fb.writelines("#SBATCH --output=slurm-%j.out\n")
+            fb.writelines("#SBATCH --mail-type=ALL,ARRAY_TASKS\n")
+            fb.writelines("#SBATCH --mail-user=${email}\n")
+           
+            fb.writelines("#SBATCH --constraint=${constraint}\n")
+            fb.writelines("module use /stornext/System/data/modulefiles/sysbio\n")
+            fb.writelines("module load DiaNN/1.8\n")
+            fb.writelines("diann-1.8 ")
+            fb.writelines(" --f ${inputfiles} --lib \"${lib}\"")
+            fb.writelines("--threads ${threads} --verbose 4 ")
+            fb.writelines(" --fasta \"${fastafile}\" ")
+            fb.writelines(" ${args} \n")
+            
+            fb.writelines(
+                'echo \"$SLURM_ARRAY_JOB_ID,$SLURM_ARRAY_TASK_ID,${partition},${type},${jobname},${numfiles},${cpuspertask},${mem},${threads},${timelimit}\" >> '+f'{self.Config["Output_path"]}/jobs_executed.txt\n'
+            )
+    """ 
+    Method specific to MQ only, to update XML file
+    """  
+    def get_input_files(self,runID:str)->list:
+        outpath=os.path.join(self.Config["Output_path"],runID,self.Config["input"]["ext"])
+        return glob.glob(outpath, recursive=False)
 
-    def create_jobscript(self)->bool:
-        pass
+    '''Overriding get_tmpl_values to add input files'''   
+    def get_tmpl_values(self,parameters:dict)->dict:
+        params=super().get_tmpl_values(parameters=parameters)
+        if 'inputfiles'  in parameters.keys():
+            params['inputfiles']=parameters['inputfiles']
 
-        return True
+        params['type']=self.Config["jobs"]["run_type"]
+        if params['type']=="lib":
+            params['lib']=next(item['path'] for item in self.Config["extra"] if item["name"] == "tsv")
+            params["args"]="".join([
+            " --out \"./outputreport.tsv\" ",
+            " --qvalue 0.01 --matrices  --out-lib \"./spectrallib.tsv\" ",
+            " --gen-spec-lib --predictor --met-excision --cut \"K*,R*\" --mass-acc 10 --mass-acc-ms1 10.0 --use-quant --reanalyse",
+            
+            " --smart-profiling --peak-center --no-ifs-removal \n"])
+            
+
+            
+        elif params['type']=="libfree":
+            params['lib']=""
+            params["args"]="".join([
+            " --out \"./outputreport.tsv\" ",
+            " --qvalue 0.01 --matrices  --out-lib \"./spectrallib.tsv\" --gen-spec-lib --predictor --fasta-search  ",
+            " --min-fr-mz 200 --max-fr-mz 1800 --met-excision --use-quant  ",
+            " --cut \"K*,R*\" --missed-cleavages 1 --min-pep-len 7 --max-pep-len 30 --min-pr-mz 300  ",
+            " --max-pr-mz 1800 --min-pr-charge 1 --max-pr-charge 4 --mass-acc 10 --mass-acc-ms1 10.0  ",
+            " --reanalyse --smart-profiling --peak-center --no-ifs-removal"])
+
+        params['fastafile']=next(item['path'] for item in self.Config["extra"] if item["name"] == "fasta")
+        return params

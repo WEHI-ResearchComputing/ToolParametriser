@@ -217,12 +217,7 @@ class DiaNNJob(AbstractJob):
     def createExecutableBatchFile(
         self, job_parameters, path, specificInputFiles, ExecutionID
     ) -> None:
-        os.system(f'(cd {path} ; DIANN_RUN_TYPE=""{job_parameters["type"]}"" DIANN_LIB=""{specificInputFiles["tsv_file"]}"" DIANN_TIME=""{job_parameters["timelimit"]}""  DIANN_CPUS=""{job_parameters["cpus-per-task"]}"" DIANN_MEM=""{job_parameters["mem"]}G"" DIANN_THREADS=""{job_parameters["threads"]} DIANN_OUTPUT_PATH=""{path}/output"" /stornext/System/data/apps/rc-tools/rc-tools-1.0/bin/tools/DiaNN/createdianncmd.sh)')
-
-        with open(f"{path}diann.slurm", "a") as fb:
-            fb.writelines(f'echo ""$SLURM_JOB_ID"",{job_parameters["partition"]},{job_parameters["type"]},{job_parameters["job-name"]},{job_parameters["NumFiles"]},{job_parameters["cpus-per-task"]},{job_parameters["mem"]},{job_parameters["threads"]},{job_parameters["timelimit"]} >> jobs_executed_{ExecutionID}.txt\n')
-
-        os.system(f"sbatch {path}diann.slurm")
+        
 class GenericJob(AbstractJob):
     
     def __init__(
