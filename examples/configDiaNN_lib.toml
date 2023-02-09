@@ -10,11 +10,12 @@ name="tsv"
 path="/vast/projects/RCP/benchmarking/DiaNN/P4025/library.tsv"
 
 [output]
-path = "/vast/scratch/users/iskander.j/Diann_lib" 
+path = "/vast/scratch/users/iskander.j/test" 
 
 [jobs]
+template_path="./"
 num_reps = 1 
 params_path = "/vast/scratch/users/iskander.j/ToolParametriser/examples/DiaNNbenchmarking-profiles.csv" 
 tool_type="DiaNN"
 run_type="lib"
-email="iskander.j@wehi.edu.au"
+email=""

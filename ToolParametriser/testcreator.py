@@ -11,20 +11,22 @@ class AbstractTester(ABC):
         super().__init__()
         self.tmplfile="" #Must be set by concrete class
         self.Config=config
+        FORMAT = '[%(asctime)s]:%(levelname)s:%(name)s:%(message)s'
+        logging.basicConfig(format=FORMAT,filename=f'{os.path.expanduser("~")}/.toolparametriser/debug.log', 
+                    encoding='utf-8', level=logging.DEBUG)
+        self.jobs_completed_file=os.path.join(self.Config['output']['path'],"jobs_completed.csv")
         if self.validate_config():
-            self.Config["Output_path"] = config['output']['path']+"_"+datetime.now().strftime('%Y%m%d%H%M%S')
-            self.get_test_parameters()
+            self.Config["Output_path"] = os.path.join(config['output']['path'],config['jobs']['tool_type']+"_"+datetime.now().strftime('%Y%m%d%H%M%S'))
+            if self.validate_test_parameters():
+                self.get_test_parameters()
+            else:
+                logging.fatal("Test Job parameters not valid")
+                raise InvalidConfigObject
         else:
             logging.fatal("Config file not valid")
             raise InvalidConfigObject
         if not os.path.exists(f'{os.path.expanduser("~")}/.toolparametriser/'):
             os.makedirs(f'{os.path.expanduser("~")}/.toolparametriser/')
-        
-        FORMAT = '[%(asctime)s]:%(levelname)s:%(name)s:%(message)s'
-        logging.basicConfig(format=FORMAT,filename=f'{os.path.expanduser("~")}/.toolparametriser/debug.log', 
-                    encoding='utf-8', level=logging.DEBUG)
-    
-        self.template_path=f"{os.path.expanduser('~')}/.toolparametriser/"
     
     @abstractmethod
     def create_jobscript_template(self,**kwargs):
@@ -39,8 +41,8 @@ class AbstractTester(ABC):
         ntasks=1
         if 'ntasks'  in parameters.keys():
             ntasks=parameters["ntasks"]
-        
         params={
+            'jobtype':f'{config["jobs"]["tool_type"]}_{config["jobs"]["run_type"]}',
             'partition': parameters["partition"], 
             'jobname': parameters["jobname"], 
             'numfiles': parameters["numfiles"], 
@@ -51,14 +53,12 @@ class AbstractTester(ABC):
             'ntasks':ntasks,
             'email':config["jobs"]["email"]
         }
-
-        params['constraint']=None
-        if 'constraint'  in parameters.keys():
-            params['constraint']=parameters['constraint']
+        params['constraints']=None
+        if 'constraints'  in parameters.keys():
+            params['constraints']=parameters['constraints']
 
         if 'inputfiles'  in parameters.keys():
             params['inputfiles']=parameters['inputfiles']
-
         return params
 
     def run_jobscript(self,parameters:dict,runID:str):
@@ -66,17 +66,17 @@ class AbstractTester(ABC):
         params=self.get_tmpl_values(parameters)
                 
         ##Substitute Tmpl 
-        with open(self.tmplfile, 'r') as f:
+        with open(os.path.join(self.Config["Output_path"],self.tmplfile), 'r') as f:
             template = Template(f.read())
             result = template.safe_substitute(params)
         ##Save to file
         with open(os.path.join(self.Config["Output_path"],runID,"batch.slurm"), 'w') as f:
             f.write(result)
-        ##RUN
-        print(
-            os.system(f"cd {os.path.join(self.Config['Output_path'],runID)};"+ 
-                f"sbatch {os.path.join(self.Config['Output_path'],runID,'batch.slurm')}")
-            )
+        ##RUN if not dryrun
+        if not self.Config["dryrun"]:
+                os.system(f"cd {os.path.join(self.Config['Output_path'],runID)};"+ 
+                    f"sbatch {os.path.join(self.Config['Output_path'],runID,'batch.slurm')}")
+           
 
     ##TODO validate_config
     def validate_config(self)->bool:
@@ -85,6 +85,7 @@ class AbstractTester(ABC):
 
     ##TODO validate_test_parameters
     def validate_test_parameters(self)->bool:
+
         return True
 
     def get_test_parameters(self):
@@ -96,6 +97,7 @@ class AbstractTester(ABC):
                 logging.fatal("Test parameters file exists, but isn't readable")
             elif IOError.errno == errno.ENOENT:
                 logging.fatal("Test parameters file isn't readable because it isn't there")
+                raise IOError
     
     
     def prepare_run_dir(self,runID:str,params:dict):
@@ -113,20 +115,22 @@ class AbstractTester(ABC):
                 shutil.copy(runfile, os.path.join(outpath,name_of_folder))
         for extrafile in self.Config["extra"]:
             shutil.copy(extrafile["path"],outpath)
+        with open(self.jobs_completed_file,'w+') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(["JobType","JobId","Partition","numfiles","cpuspertask","mem","threads","timelimit","constraints","extra"])
+                    
 
     
-    def run_test(self,usetmpl:bool):
-        self.get_test_parameters()
-
+    def run_test(self,usetmpl:bool):        
         if self.validate_test_parameters():
             for parameters in self.Config["job_parameters"]:
-                runID = f"repo-{parameters['jobname']}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-                self.prepare_run_dir(runID=runID,params=parameters)
-                if (not os.path.exists(self.tmplfile)) or (not usetmpl):
+                for rep in range(self.Config["jobs"]["num_reps"]):
+                    runID = f"repo-{parameters['jobname']}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                    self.prepare_run_dir(runID=runID,params=parameters)
                     self.create_jobscript_template()
-                self.run(runID,parameters)
-                with open(os.path.join(self.Config["Output_path"],'config.json'), 'w') as cfile:
-                    cfile.write(json.dumps(self.Config))
+                    self.run(runID,parameters)
+            with open(os.path.join(self.Config["Output_path"],'config.json'), 'w') as cfile:
+                cfile.write(json.dumps(self.Config))
         else:
             logging.fatal("Test Parameters file not valid.")
             raise InvalidTestParameters
@@ -136,16 +140,15 @@ class AbstractTester(ABC):
 class MQTester(AbstractTester):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
-        self.tmplfile=os.path.join(self.template_path,"MQtemplate.tmpl")
+        self.tmplfile="MQtemplate.tmpl"
+        config["jobs"]["run_type"]=""
     
     def run(self,runID,parameters):
         self.update_xml(runID ,parameters)
         self.run_jobscript(parameters,runID)
-        logging.info("MQ created and run")
 
     def create_jobscript_template(self):
-        logging.info("Creating new tmpl")
-        with open(self.tmplfile, "w+") as fb:
+        with open(os.path.join(self.Config["Output_path"],self.tmplfile), "w+") as fb:
             fb.writelines("#!/bin/bash\n")
             fb.writelines("#SBATCH -p ${partition}\n")
             fb.writelines("#SBATCH --job-name=${jobname}\n")
@@ -157,14 +160,14 @@ class MQTester(AbstractTester):
             fb.writelines("#SBATCH --mail-type=ALL,ARRAY_TASKS\n")
             fb.writelines("#SBATCH --mail-user=${email}\n")
            
-            fb.writelines("#SBATCH --constraint=${constraint}\n")
+            fb.writelines("#SBATCH --constraint=${constraints}\n")
 
             fb.writelines("module load MaxQuant/2.0.2.0\n")
             fb.writelines("/stornext/System/data/apps/rc-tools/rc-tools-1.0/bin/tools/MQ/createMQXML.py ${threads}\n")
             fb.writelines("MaxQuant mqpar.mod.xml\n")
 
             fb.writelines(
-                'echo \"$SLURM_ARRAY_JOB_ID,$SLURM_ARRAY_TASK_ID,${partition},${jobname},${numfiles},${cpuspertask},${mem},${threads},${timelimit}\" >> '+f'{self.Config["Output_path"]}/jobs_executed.txt\n'
+                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${jobname},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${constraints},\" >> '+f'{self.jobs_completed_file}\n'
             )
 
     def validate_config(self) -> bool:
@@ -220,7 +223,7 @@ class MQTester(AbstractTester):
 
 class InvalidConfigObject(Exception):
     "Raised when config object is not valid, or have missing fields"
-    def __init__(self, message="Config object is not valid, or have missing fields. See logs in ~/.toolparametriser/"):
+    def __init__(self, message="Config object or Job parameters object is not valid, or have missing fields. See logs in ~/.toolparametriser/"):
         self.message = message
         super().__init__(self.message)
 class InvalidTestParameters(Exception):
@@ -232,13 +235,18 @@ class InvalidTestParameters(Exception):
 class DiaNNTester(AbstractTester):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
-        self.tmplfile=os.path.join(self.template_path,"DiaNNtemplate.tmpl")
+        self.tmplfile="DiaNNtemplate.tmpl"
         self.inputfiles=[]
 
     def validate_config(self) -> bool:
         valid = super().validate_config()
-        if not any(d.get('name', "") == 'tsv' for d in self.Config["extra"]) or not any(d.get('name', "") == 'fasta' for d in self.Config["extra"]):
-            valid=False
+        if not self.Config["jobs"]["tool_type"]=="DiaNN":
+            return False
+        if self.Config["jobs"]["run_type"]=="lib":
+            if not any(d.get('name', "") == 'tsv' for d in self.Config["extra"]) or not any(d.get('name', "") == 'fasta' for d in self.Config["extra"]):
+                return False
+        elif not any(d.get('name', "") == 'fasta' for d in self.Config["extra"]):
+                return False
         if not self.Config["jobs"]["tool_type"]=="DiaNN":
             valid=False
         return valid
@@ -246,10 +254,9 @@ class DiaNNTester(AbstractTester):
     def run(self,runID,parameters):
         parameters['inputfiles']=' --f '.join(self.get_input_files(runID=runID))
         self.run_jobscript(parameters,runID)
-        print("DiaNN created and run")
 
     def create_jobscript_template(self):
-        with open(self.tmplfile, "w+") as fb:
+        with open(os.path.join(self.Config["Output_path"],self.tmplfile), "w+") as fb:
             fb.writelines("#!/bin/bash\n")
             fb.writelines("#SBATCH -p ${partition}\n")
             fb.writelines("#SBATCH --job-name=${jobname}\n")
@@ -261,7 +268,7 @@ class DiaNNTester(AbstractTester):
             fb.writelines("#SBATCH --mail-type=ALL,ARRAY_TASKS\n")
             fb.writelines("#SBATCH --mail-user=${email}\n")
            
-            fb.writelines("#SBATCH --constraint=${constraint}\n")
+            fb.writelines("#SBATCH --constraint=${constraints}\n")
             fb.writelines("module use /stornext/System/data/modulefiles/sysbio\n")
             fb.writelines("module load DiaNN/1.8\n")
             fb.writelines("diann-1.8 ")
@@ -271,10 +278,10 @@ class DiaNNTester(AbstractTester):
             fb.writelines(" ${args} \n")
             
             fb.writelines(
-                'echo \"$SLURM_ARRAY_JOB_ID,$SLURM_ARRAY_TASK_ID,${partition},${type},${jobname},${numfiles},${cpuspertask},${mem},${threads},${timelimit}\" >> '+f'{self.Config["Output_path"]}/jobs_executed.txt\n'
+                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${jobname},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${constraints},type=${type}\" >> '+f'{self.jobs_completed_file}\n'
             )
     """ 
-    Method specific to MQ only, to update XML file
+    Method specific to Diann only
     """  
     def get_input_files(self,runID:str)->list:
         outpath=os.path.join(self.Config["Output_path"],runID,self.Config["input"]["ext"])
@@ -295,8 +302,6 @@ class DiaNNTester(AbstractTester):
             " --gen-spec-lib --predictor --met-excision --cut \"K*,R*\" --mass-acc 10 --mass-acc-ms1 10.0 --use-quant --reanalyse",
             
             " --smart-profiling --peak-center --no-ifs-removal \n"])
-            
-
             
         elif params['type']=="libfree":
             params['lib']=""

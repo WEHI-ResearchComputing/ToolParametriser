@@ -9,10 +9,10 @@ name="xml"
 path="/vast/projects/RCP/benchmarking/MQ/P4023_old/mqpar.xml"
 
 [output]
-path = "/vast/scratch/users/iskander.j/MQ" 
+path = "/vast/scratch/users/iskander.j/test" 
 
 [jobs]
 num_reps = 1 
 params_path = "/vast/scratch/users/iskander.j/ToolParametriser/examples/MQbenchmarking-profiles.csv" 
 tool_type="MQ"
-email="iskander.j@wehi.edu.au"
+email=""

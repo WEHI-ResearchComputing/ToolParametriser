@@ -1,29 +1,14 @@
+#!/stornext/HPCScratch/home/iskander.j/myenvs/py3_11/bin/python
 
 import csv
 import os
 import subprocess
+import pandas as pd
+import logging,csv
 
-
-def readExecutedJobs(executedjobs):
-    with open(executedjobs, "r") as f:
-        lines = f.read().splitlines()
-    return lines
-
-
-def checkJobOnCSV(executed_job):
-    with open("benchmarking-results/final-results.csv", "a+") as f:
-        reader = csv.reader(f, delimiter=",")
-        for row in reader:
-            if executed_job == row[1]:
-                return True
-        return False
-
-
-def clean_data(dct):
-
+def clean(dct):
     # Turn hours into seconds (s)
     job_wall_clock_splitted = dct["Job Wall-clock time"].replace("-", ":").split(":")
-
     if len(job_wall_clock_splitted) > 3:
         cpu_utilized_in_seconds = (
             (int(job_wall_clock_splitted[0]) * 24 + int(job_wall_clock_splitted[1]))
@@ -38,71 +23,77 @@ def clean_data(dct):
             + int(job_wall_clock_splitted[2])
         )
 
-    dct["Job Wall-clock time(s)"] = cpu_utilized_in_seconds
+    dct["time(s)"] = cpu_utilized_in_seconds
 
     # CPU Efficiency %
-    dct["CPU Efficiency"] = dct["CPU Efficiency"].split("%")[0]
+    dct["CPUEff"] = dct["CPU Efficiency"].split("%")[0]
 
     # CPUsUsed
     dct["CPUsUsed"] = (
-        int(dct["Cores per node"]) * int(float(dct["CPU Efficiency"])) / 100
+        int(dct["Cores per node"])*int(dct["Nodes"]) * int(float(dct["CPUEff"])) / 100
     )
-
+    dct["CPUsReq"] = (
+        int(dct["Cores per node"])*int(dct["Nodes"])
+    )
     # Memory Requested
     memory_efficiency_splitted = dct["Memory Efficiency"].split()
 
-    dct["MemReq"] = memory_efficiency_splitted[2].split(".")[0]
-    dct["MemUtil"] = float(memory_efficiency_splitted[0].split("%")[0])
+    dct["MemReq"] = float(memory_efficiency_splitted[2].split(" ")[0])
+    dct["MemEff"] = float(memory_efficiency_splitted[0].split("%")[0])
 
     # Memory Used
 
-    dct["MemUsed"] = int(dct["MemReq"]) * dct["MemUtil"] / 100
-
+    dct["MemUsed"] = int(dct["MemReq"]) * dct["MemEff"] / 100
     return dct
 
 
-def checkJobStatus(executed_job):
+def get(completed_jobs:str,results_path,use_GPUs:bool=True):
+    allresults=[]
+    '''
+    Input: JobId,Partition,numfiles,cpuspertask,mem,threads,timelimit,constraints,extra
+    Output: JobId,Nodes,CPUs Used,CPUs Efficiency,Memory Used,Memory Efficiency,GPUs Used
+    '''
+    jobs=pd.read_csv(completed_jobs)
+    #Get job ids
+    #jobids=",".join(map(str,pd.read_csv(executed_jobs,header=None)[0].tolist()))
+    #list_of_executed_jobs=pd.read_csv(executed_jobs,header=None)[0].tolist()
+    
+    for index, executed_job in jobs.iterrows():
+        result = subprocess.run(["seff", f"{executed_job['jobid']}"], stdout=subprocess.PIPE)
+        if result.returncode==0:
+            if "COMPLETED" in str(result.stdout):
+                jobdetails = result.stdout.splitlines()
+                splitted_details = []
+                for detail in jobdetails:
+                    splitted_details.append(detail.decode("utf-8").split(": "))
+                
+                dct = {detail[0]: detail[1] for detail in splitted_details}
+                dct = clean(dct)
+                ## TODO: What if multiple Constraints?
+                dct["constraints"]=executed_job['constraints']
+                dct["GPUs"]=0
+                if use_GPUs:
+                    result = subprocess.run(["sacct",  "-j", f"{executed_job['jobid']}", "--format=ReqTres", "--parsable", "-X","--noheader"], stdout=subprocess.PIPE)
+                    
+                    if result.returncode==0:
+                        res=result.stdout.decode("utf-8")
+                        res=res.split("|")
+                        if "gres/gpu" in res[0]:
+                            lines=res[0].split(",")
+                            dct["GPUs"]=[x for x in lines if 'gres/gpu' in x][0].split("=")[1]
+                       
+                allresults.append([executed_job["jobid"],executed_job['numfiles'],executed_job["threads"],executed_job["extra"], dct["Nodes"],dct["CPUsReq"],dct["CPUsUsed"],dct["CPUEff"],dct["MemReq"],dct["MemUsed"],dct["MemEff"],dct["GPUs"],dct["time(s)"],dct['Cluster'],dct['Constraint']])
+            else:
+                logging.error(f"Job {executed_job} is still running or has failed.")
 
-    result = subprocess.run(["seff", f"{executed_job}"], stdout=subprocess.PIPE)
-
-    if "COMPLETED" in str(result.stdout):
-        # Creates a new txt file
-        with open(f"benchmarking-results/{executed_job}.txt", "w+") as f:
-            subprocess.run(["seff", f"{executed_job}"], stdout=f)
-
-        # Read the created txt
-        with open(f"benchmarking-results/{executed_job}.txt", "r") as f:
-            job = f.read().splitlines()
-
-        splitted_details = []
-
-        for detail in job:
-            splitted_details.append(detail.split(": "))
-
-        dct = {detail[0]: detail[1] for detail in splitted_details}
-
-        dct = clean_data(dct)
-
-        # Add the new completed job to CSV file
-        with open("benchmarking-results/final-results.csv", "a") as fd:
-            fd.write(
-                f"{dct['Job ID']},{dct['Array Job ID']},{dct['State']},{dct['Cores per node']},{dct['CPU Utilized']},{dct['CPU Efficiency']},{dct['CPUsUsed']},{dct['Job Wall-clock time']},{dct['Job Wall-clock time(s)']},{dct['Memory Utilized']},{dct['Memory Efficiency']},{dct['MemReq']},{dct['MemUtil']},{dct['MemUsed']}\n"
-            )
-
-
-def main():
-    executedjobs = "jobs_executed.txt"
-    list_of_executed_jobs = readExecutedJobs(executedjobs)
-    print(list_of_executed_jobs)
-
-    for executed_job in list_of_executed_jobs:
-        # print(f'executed job: {executed_job}')
-        if checkJobOnCSV(executed_job):
-            # if job is already in the CSV then continue to next iteration
-            continue
         else:
-            checkJobStatus(executed_job)
-
-
-if __name__ == "__main__":
-    main()
+            logging.error(f"seff failed for job {executed_job}")
+    if not os.path.exists(results_path):
+            with open(results_path,'w') as f:
+                writer = csv.writer(f)
+                writer.writerow(["JobId", "NumFiles","Threads","Extra","Nodes", "CPUs Requested","CPUs Used","CPUs Efficiency","Memory Requested","Memory Used", "Memory Efficiency","GPUs Used","Time","Cluster","Constraint"])
+                writer.writerows(allresults)
+    else:
+        with open(results_path,'a') as f:
+            writer = csv.writer(f)
+            writer.writerows(allresults)
