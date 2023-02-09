@@ -1,5 +1,0 @@
-partition,jobname,numfiles,cpuspertask,mem,threads,timelimit,constraint
-regular,D-1,2,2,1,2,4:00:00,Icelake
-regular,D-2,4,2,1,4,4:00:00,Icelake
-regular,D-3,2,2,1,2,4:00:00,Cooperlake
-regular,D-4,4,2,1,4,4:00:00,Cooperlake
