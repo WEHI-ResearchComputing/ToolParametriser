@@ -4,7 +4,7 @@ import csv
 import os
 import subprocess
 import pandas as pd
-import logging,csv
+import logging,csv,math
 
 def clean(dct):
     # Turn hours into seconds (s)
@@ -50,10 +50,10 @@ def clean(dct):
 def get(completed_jobs:str,results_path,use_GPUs:bool=True):
     allresults=[]
     '''
-    Input: JobId,Partition,numfiles,cpuspertask,mem,threads,timelimit,constraints,extra
+    Input: jobtype,jobid,partition,numfiles,cpuspertask,mem,threads,timelimit,constraints,extra
     Output: JobId,Nodes,CPUs Used,CPUs Efficiency,Memory Used,Memory Efficiency,GPUs Used
     '''
-    jobs=pd.read_csv(completed_jobs)
+    jobs=pd.read_csv(completed_jobs,index_col=False)
     #Get job ids
     #jobids=",".join(map(str,pd.read_csv(executed_jobs,header=None)[0].tolist()))
     #list_of_executed_jobs=pd.read_csv(executed_jobs,header=None)[0].tolist()
@@ -70,7 +70,7 @@ def get(completed_jobs:str,results_path,use_GPUs:bool=True):
                 dct = {detail[0]: detail[1] for detail in splitted_details}
                 dct = clean(dct)
                 ## TODO: What if multiple Constraints?
-                dct["constraints"]=executed_job['constraints']
+                dct["Constraints"]=executed_job['constraints']
                 dct["GPUs"]=0
                 if use_GPUs:
                     result = subprocess.run(["sacct",  "-j", f"{executed_job['jobid']}", "--format=ReqTres", "--parsable", "-X","--noheader"], stdout=subprocess.PIPE)
@@ -81,17 +81,19 @@ def get(completed_jobs:str,results_path,use_GPUs:bool=True):
                         if "gres/gpu" in res[0]:
                             lines=res[0].split(",")
                             dct["GPUs"]=[x for x in lines if 'gres/gpu' in x][0].split("=")[1]
-                       
-                allresults.append([executed_job["jobid"],executed_job['numfiles'],executed_job["threads"],executed_job["extra"], dct["Nodes"],dct["CPUsReq"],dct["CPUsUsed"],dct["CPUEff"],dct["MemReq"],dct["MemUsed"],dct["MemEff"],dct["GPUs"],dct["time(s)"],dct['Cluster'],dct['Constraint']])
+                
+                if pd.isnull(executed_job["extra"]):
+                    executed_job["extra"]=None
+                allresults.append([executed_job["jobid"],executed_job['numfiles'],executed_job["threads"],executed_job["extra"], dct["Nodes"],dct["CPUsReq"],dct["CPUsUsed"],dct["CPUEff"],dct["MemReq"],dct["MemUsed"],dct["MemEff"],dct["GPUs"],dct["time(s)"],dct['Cluster'],dct['Constraints']])
             else:
-                logging.error(f"Job {executed_job} is still running or has failed.")
+                logging.error(f"Job {executed_job['jobid']} is still running or has failed.")
 
         else:
-            logging.error(f"seff failed for job {executed_job}")
+            logging.error(f"seff failed for job {executed_job['jobid']}")
     if not os.path.exists(results_path):
             with open(results_path,'w') as f:
                 writer = csv.writer(f)
-                writer.writerow(["JobId", "NumFiles","Threads","Extra","Nodes", "CPUs Requested","CPUs Used","CPUs Efficiency","Memory Requested","Memory Used", "Memory Efficiency","GPUs Used","Time","Cluster","Constraint"])
+                writer.writerow(["JobId", "NumFiles","Threads","Extra","Nodes", "CPUs Requested","CPUs Used","CPUs Efficiency","Memory Requested","Memory Used", "Memory Efficiency","GPUs Used","Time","Cluster","Constraints"])
                 writer.writerows(allresults)
     else:
         with open(results_path,'a') as f:

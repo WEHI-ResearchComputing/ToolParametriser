@@ -115,9 +115,10 @@ class AbstractTester(ABC):
                 shutil.copy(runfile, os.path.join(outpath,name_of_folder))
         for extrafile in self.Config["extra"]:
             shutil.copy(extrafile["path"],outpath)
-        with open(self.jobs_completed_file,'w+') as f:
+        if not os.path.exists(self.jobs_completed_file):
+            with open(self.jobs_completed_file,'w+') as f:
                     writer = csv.writer(f)
-                    writer.writerow(["JobType","JobId","Partition","numfiles","cpuspertask","mem","threads","timelimit","constraints","extra"])
+                    writer.writerow(["jobtype","jobid","partition","numfiles","cpuspertask","mem","threads","timelimit","constraints","extra"])
                     
 
     
@@ -167,7 +168,7 @@ class MQTester(AbstractTester):
             fb.writelines("MaxQuant mqpar.mod.xml\n")
 
             fb.writelines(
-                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${jobname},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${constraints},\" >> '+f'{self.jobs_completed_file}\n'
+                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${constraints},\" >> '+f'{self.jobs_completed_file}\n'
             )
 
     def validate_config(self) -> bool:
@@ -278,7 +279,7 @@ class DiaNNTester(AbstractTester):
             fb.writelines(" ${args} \n")
             
             fb.writelines(
-                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${jobname},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${constraints},type=${type}\" >> '+f'{self.jobs_completed_file}\n'
+                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${constraints},type=${type}\" >> '+f'{self.jobs_completed_file}\n'
             )
     """ 
     Method specific to Diann only
