@@ -33,8 +33,9 @@ def main(args):
     elif args.runtype.lower()=="analyse":
         print("analyse")
         jobs_completed_file=os.path.join(config['output']['path'],"jobs_completed.csv")
-
-        testresults.get(completed_jobs=jobs_completed_file,results_path="./allresults_1.csv")
+        if 'results_file' not in config['output']:
+            config['output']['result_file']="./allresults.csv"
+        testresults.get(completed_jobs=jobs_completed_file,results_path=config['output']['results_file'])
 
 
 if __name__ == "__main__":
