@@ -9,7 +9,7 @@ name="xml"
 path="/vast/projects/RCP/benchmarking/MQ/P4023_old/mqpar.xml"
 
 [output]
-path = "/vast/scratch/users/iskander.j/test" 
+path = "/vast/scratch/users/iskander.j/test1" 
 
 [jobs]
 num_reps = 1 
