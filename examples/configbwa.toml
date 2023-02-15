@@ -13,7 +13,7 @@ name="gatk/4.2.5.0"
 path = "/vast/scratch/users/iskander.j/test" 
 
 [jobs]
-cmd="bwa mem -t ${threads} -K 10000000 -R '@RG\tID:sample_rg1\tLB:lib1\tPL:bar\tSM:sample\tPU:sample_rg1' ${reference} ${input_path} | gatk SortSam --java-options -Xmx30g --MAX_RECORDS_IN_RAM 250000 -I /dev/stdin -O out.bam --SORT_ORDER coordinate"
+cmd="bwa mem -t ${threads} -K 10000000 -R '@RG\\tID:sample_rg1\\tLB:lib1\\tPL:bar\\tSM:sample\\tPU:sample_rg1' ${reference} ${input_path} | gatk SortSam --java-options -Xmx30g --MAX_RECORDS_IN_RAM 250000 -I /dev/stdin -O out.bam --SORT_ORDER coordinate"
 num_reps = 1 
 params_path = "/vast/scratch/users/iskander.j/ToolParametriser/examples/IGenricbenchmarking-profiles.csv" 
 tool_type="bwa"
