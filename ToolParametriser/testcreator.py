@@ -314,7 +314,7 @@ class DiaNNTester(AbstractTester):
         params['fastafile']=next(item['path'] for item in self.Config["extra"] if item["name"] == "fasta")
         return params
 
-class InlineGeneric(AbstractTester):
+class FromCMDTester(AbstractTester):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
         self.tmplfile="Generictemplate.tmpl"
