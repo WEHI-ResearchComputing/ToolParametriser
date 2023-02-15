@@ -24,31 +24,30 @@ class AbstractTester(ABC):
                     writer = csv.writer(f)
                     writer.writerow(["jobtype","jobid","partition","numfiles","cpuspertask","mem","threads","timelimit","constraints","workingdir","extra"])
                     
-        if self.__validate_config():
+        if self._validate_config():
             self.Config["Output_path"] = os.path.join(config['output']['path'],config['jobs']['tool_type']+"_"+datetime.now().strftime('%Y%m%d%H%M%S'))
             os.makedirs(self.Config["Output_path"])
-            if self.__validate_test_parameters():
-                self.__get_test_parameters()
+            if self._validate_test_parameters():
+                self._get_test_parameters()
             else:
                 logging.fatal("Test Job parameters not valid")
                 raise InvalidConfigObject
         else:
             logging.fatal("Config file not valid")
             raise InvalidConfigObject
-        
-    
+
     @abstractmethod
-    def __create_jobscript_template(self,**kwargs):
+    def _create_jobscript_template(self,**kwargs):
         pass
     
-    def __get_tmpl_values(self,parameters:dict,work_dir:str)->dict:
+    def _get_tmpl_values(self,parameters:dict,work_dir:str)->dict:
         config=self.Config
         ntasks=1
         if 'ntasks'  in parameters.keys():
             ntasks=parameters["ntasks"]
         params={
             'jobtype':f'{config["jobs"]["tool_type"]}_{config["jobs"]["run_type"]}',
-            'workdir':work_dir,
+            'workingdir':work_dir,
             'partition': parameters["partition"], 
             'jobname': parameters["jobname"], 
             'numfiles': parameters["numfiles"], 
@@ -67,9 +66,9 @@ class AbstractTester(ABC):
             params['inputfiles']=parameters['inputfiles']
         return params
 
-    def __run_job(self,parameters:dict,runID:str,work_dir:str):
+    def _run_job(self,parameters:dict,runID:str,work_dir:str):
         #Prepare values for tmpl
-        params=self.__get_tmpl_values(parameters,work_dir) 
+        params=self._get_tmpl_values(parameters,work_dir) 
         #Substitute Tmpl 
         with open(os.path.join(self.Config["Output_path"],self.tmplfile), 'r') as f:
             template = Template(f.read())
@@ -83,15 +82,15 @@ class AbstractTester(ABC):
                     f"sbatch {os.path.join(self.Config['Output_path'],runID,'batch.slurm')}")
            
     ##TODO validate_config
-    def __validate_config(self)->bool:
+    def _validate_config(self)->bool:
 
         return True
     ## TODO validate_test_parameters
-    def __validate_test_parameters(self)->bool:
+    def _validate_test_parameters(self)->bool:
 
         return True
 
-    def __get_test_parameters(self):
+    def _get_test_parameters(self):
         try:
             with open(self.Config['jobs']['params_path'], "r") as file:
                 self.Config["job_parameters"]=list(csv.DictReader(file))
@@ -101,7 +100,6 @@ class AbstractTester(ABC):
             elif IOError.errno == errno.ENOENT:
                 logging.fatal("Test parameters file isn't readable because it isn't there")
                 raise IOError
-    
     
     def __prepare_run_dir(self,runID:str,params:dict) -> str:
         outpath=os.path.join(self.Config["Output_path"],runID)
@@ -116,20 +114,21 @@ class AbstractTester(ABC):
                             dirs_exist_ok=True)
             except NotADirectoryError:
                 shutil.copy(runfile, os.path.join(outpath,name_of_folder))
-        for extrafile in self.Config["extra"]:
-            shutil.copy(extrafile["path"],outpath)
+        if "extra" in self.Config:
+            for extrafile in self.Config["extra"]:
+                shutil.copy(extrafile["path"],outpath)
         
         return outpath
 
     #Accessible Function
     def run_test(self):    
-        self.__create_jobscript_template()    
-        if self.__validate_test_parameters():
+        self._create_jobscript_template()    
+        if self._validate_test_parameters():
             for parameters in self.Config["job_parameters"]:
                 for rep in range(self.Config["jobs"]["num_reps"]):
                     runID = f"repo-{parameters['jobname']}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
                     outpath=self.__prepare_run_dir(runID=runID,params=parameters)
-                    self.__run_job(runID=runID,parameters=parameters,work_dir=outpath)
+                    self._run_job(runID=runID,parameters=parameters,work_dir=outpath)
             with open(os.path.join(self.Config["Output_path"],'config.json'), 'w') as cfile:
                 cfile.write(json.dumps(self.Config))
         else:
@@ -142,11 +141,11 @@ class MQTester(AbstractTester):
         self.tmplfile="MQtemplate.tmpl"
         config["jobs"]["run_type"]=""
     
-    def __run_job(self,runID,parameters,work_dir):
+    def _run_job(self,runID,parameters,work_dir):
         self.__update_xml(runID ,parameters)
-        super().__run_job(runID=runID,parameters=parameters,work_dir=work_dir)
+        super()._run_job(runID=runID,parameters=parameters,work_dir=work_dir)
 
-    def __create_jobscript_template(self):
+    def _create_jobscript_template(self,**kwargs):
         with open(os.path.join(self.Config["Output_path"],self.tmplfile), "w+") as fb:
             fb.writelines("#!/bin/bash\n")
             fb.writelines("#SBATCH -p ${partition}\n")
@@ -169,8 +168,8 @@ class MQTester(AbstractTester):
                 'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${constraints},${workdir},\" >> '+f'{self.jobs_completed_file}\n'
             )
 
-    def __validate_config(self) -> bool:
-        valid = super().__validate_config()
+    def _validate_config(self) -> bool:
+        valid = super()._validate_config()
         if not any(d.get('name', "") == 'xml' for d in self.Config["extra"]) or not any(d.get('name', "") == 'fasta' for d in self.Config["extra"]):
             valid=False
         if not self.Config["jobs"]["tool_type"]=="MQ":
@@ -237,8 +236,8 @@ class DiaNNTester(AbstractTester):
         self.tmplfile="DiaNNtemplate.tmpl"
         self.inputfiles=[]
 
-    def __validate_config(self) -> bool:
-        valid = super().__validate_config()
+    def _validate_config(self) -> bool:
+        valid = super()._validate_config()
         if not self.Config["jobs"]["tool_type"]=="DiaNN":
             return False
         if self.Config["jobs"]["run_type"]=="lib":
@@ -250,11 +249,11 @@ class DiaNNTester(AbstractTester):
             valid=False
         return valid
 
-    def __run_job(self,runID,parameters,work_dir):
+    def _run_job(self,runID,parameters,work_dir):
         parameters['inputfiles']=' --f '.join(self.__get_input_files(runID=runID))
-        super().__run_job(runID=runID,parameters=parameters,work_dir=work_dir)
+        super()._run_job(runID=runID,parameters=parameters,work_dir=work_dir)
 
-    def __create_jobscript_template(self):
+    def _create_jobscript_template(self,**kwargs):
         with open(os.path.join(self.Config["Output_path"],self.tmplfile), "w+") as fb:
             fb.writelines("#!/bin/bash\n")
             fb.writelines("#SBATCH -p ${partition}\n")
@@ -287,8 +286,8 @@ class DiaNNTester(AbstractTester):
         return glob.glob(outpath, recursive=False)
 
     '''Overriding get_tmpl_values to add input files'''   
-    def __get_tmpl_values(self,parameters:dict,work_dir:str)->dict:
-        params=super().__get_tmpl_values(parameters=parameters,work_dir=work_dir)
+    def _get_tmpl_values(self,parameters:dict,work_dir:str)->dict:
+        params=super()._get_tmpl_values(parameters=parameters,work_dir=work_dir)
         if 'inputfiles'  in parameters.keys():
             params['inputfiles']=parameters['inputfiles']
 
@@ -318,6 +317,54 @@ class DiaNNTester(AbstractTester):
 class InlineGeneric(AbstractTester):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
-    def  __create_jobscript_template(self,**kwargs):
-        return 
+        self.tmplfile="Generictemplate.tmpl"
+    def  _create_jobscript_template(self,**kwargs):
+        with open(os.path.join(self.Config["Output_path"],self.tmplfile), "w+") as fb:
+            fb.writelines("#!/bin/bash\n")
+            fb.writelines("#SBATCH -p ${partition}\n")
+            fb.writelines("#SBATCH --job-name=${jobname}\n")
+            fb.writelines("#SBATCH --ntasks=${ntasks}\n")
+            fb.writelines("#SBATCH --time=${timelimit}\n")
+            fb.writelines("#SBATCH --cpus-per-task=${cpuspertask}\n")
+            fb.writelines("#SBATCH --mem=${mem}G\n")
+            fb.writelines("#SBATCH --output=slurm-%j.out\n")
+            fb.writelines("#SBATCH --mail-type=ALL,ARRAY_TASKS\n")
+            fb.writelines("#SBATCH --mail-user=${email}\n")
+           
+            fb.writelines("#SBATCH --constraint=${constraints}\n")
+
+            fb.writelines("${modules}\n")
+            if 'cmd' in self.Config["jobs"]:
+                fb.writelines(f"{self.Config['jobs']['cmd']}\n")
+            
+            fb.writelines(
+                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${constraints},${workingdir},type=${type}\" >> '+f'{self.jobs_completed_file}\n'
+            )
+    
+    def _run_job(self,runID,parameters,work_dir):
+        
+        super()._run_job(runID=runID,parameters=parameters,work_dir=work_dir)
+
+    def _get_modules(self):
+        modules_str=""
+        if "modules" in self.Config:
+            for mod in self.Config["modules"]:
+                if "use" in mod:
+                    modules_str+=f"module use {mod['use']}\n"
+                if "name" in mod:
+                    modules_str+=f"module load {mod['name']}\n"
+        return modules_str
+
+
+
+
+    '''Overriding get_tmpl_values'''   
+    def _get_tmpl_values(self,parameters:dict,work_dir:str)->dict:
+        params=super()._get_tmpl_values(parameters=parameters,work_dir=work_dir)
+        params["modules"]=self._get_modules()
+        if "cmd_placeholder" in self.Config:
+            for placeholder in self.Config["cmd_placeholder"]:
+                if "name" in placeholder and "path" in placeholder:
+                    params[placeholder["name"]]=placeholder["path"]
+        return params    
     
