@@ -1,3 +1,3 @@
 [output]
-jobs_details_path = "/vast/scratch/users/iskander.j/test/jobs_completed.csv" 
-results_file="/vast/scratch/users/iskander.j/test/devresults_1.csv"
+jobs_details_path = "/vast/scratch/users/iskander.j/test/jobs_test.csv" 
+results_file="/vast/scratch/users/iskander.j/test/devresults_test.csv"

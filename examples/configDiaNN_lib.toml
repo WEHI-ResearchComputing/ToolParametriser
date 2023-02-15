@@ -13,7 +13,6 @@ path="/vast/projects/RCP/benchmarking/DiaNN/P4025/library.tsv"
 path = "/vast/scratch/users/iskander.j/test" 
 
 [jobs]
-template_path="./"
 num_reps = 1 
 params_path = "/vast/scratch/users/iskander.j/ToolParametriser/examples/DiaNNbenchmarking-profiles.csv" 
 tool_type="DiaNN"
