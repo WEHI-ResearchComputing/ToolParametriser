@@ -49,9 +49,11 @@ def clean(dct):
 
 def get(completed_jobs:str,results_path,use_GPUs:bool=True):
     allresults=[]
+    failed=[]
     '''
-    Input: jobtype,jobid,partition,numfiles,cpuspertask,mem,threads,timelimit,constraints,extra
-    Output: JobId,JobType,NumFiles,Threads,Extra,Nodes,CPUs Requested,CPUs Used,CPUs Efficiency,Memory Requested,Memory Used,Memory Efficiency,GPUs Used,Time,Cluster,Constraints
+    Input: jobtype,jobid,partition,numfiles,cpuspertask,mem,threads,timelimit,constraints,workingdir,extra
+    Output: JobId,JobType,NumFiles,Threads,Extra,Nodes,CPUs Requested,CPUs Used,CPUs Efficiency,Memory Requested,
+            Memory Used,Memory Efficiency,GPUs Used,Time,WorkingDir,Cluster,Constraints
     '''
     jobs=pd.read_csv(completed_jobs,index_col=False)
     #Get job ids
@@ -61,14 +63,14 @@ def get(completed_jobs:str,results_path,use_GPUs:bool=True):
     for index, executed_job in jobs.iterrows():
         result = subprocess.run(["seff", f"{executed_job['jobid']}"], stdout=subprocess.PIPE)
         if result.returncode==0:
+            jobdetails = result.stdout.splitlines()
+            splitted_details = []
+            for detail in jobdetails:
+                splitted_details.append(detail.decode("utf-8").split(": "))
+            
+            dct = {detail[0]: detail[1] for detail in splitted_details}
+            dct = clean(dct)
             if "COMPLETED" in str(result.stdout):
-                jobdetails = result.stdout.splitlines()
-                splitted_details = []
-                for detail in jobdetails:
-                    splitted_details.append(detail.decode("utf-8").split(": "))
-                
-                dct = {detail[0]: detail[1] for detail in splitted_details}
-                dct = clean(dct)
                 ## TODO: What if multiple Constraints?
                 dct["Constraints"]=executed_job['constraints']
                 dct["GPUs"]=0
@@ -84,18 +86,31 @@ def get(completed_jobs:str,results_path,use_GPUs:bool=True):
                 
                 if pd.isnull(executed_job["extra"]):
                     executed_job["extra"]=None
-                allresults.append([executed_job["jobid"],executed_job["jobtype"],executed_job['numfiles'],executed_job["threads"],executed_job["extra"], dct["Nodes"],dct["CPUsReq"],dct["CPUsUsed"],dct["CPUEff"],dct["MemReq"],dct["MemUsed"],dct["MemEff"],dct["GPUs"],dct["time(s)"],dct['Cluster'],dct['Constraints']])
+                allresults.append([executed_job["jobid"],executed_job["jobtype"],executed_job['numfiles'],executed_job["threads"],executed_job["extra"], 
+                                    dct["Nodes"],dct["CPUsReq"],dct["CPUsUsed"],dct["CPUEff"],dct["MemReq"],dct["MemUsed"],dct["MemEff"],dct["GPUs"],
+                                    dct["time(s)"],executed_job['workingdir'],dct['Cluster'],executed_job['constraints']])
             else:
                 logging.error(f"Job {executed_job['jobid']} is still running or has failed.")
-
+                failed.append([executed_job["jobid"],executed_job["jobtype"],dct["State"],executed_job['numfiles'],executed_job["threads"],dct["time(s)"],executed_job["extra"],
+                                executed_job['workingdir'],dct['Cluster'],executed_job['constraints']])
         else:
             logging.error(f"seff failed for job {executed_job['jobid']}")
     if not os.path.exists(results_path):
             with open(results_path,'w') as f:
                 writer = csv.writer(f)
-                writer.writerow(["JobId", "JobType","NumFiles","Threads","Extra","Nodes", "CPUs Requested","CPUs Used","CPUs Efficiency","Memory Requested","Memory Used", "Memory Efficiency","GPUs Used","Time","Cluster","Constraints"])
+                writer.writerow(["JobId", "JobType","NumFiles","Threads","Extra","Nodes", "CPUs Requested","CPUs Used","CPUs Efficiency","Memory Requested","Memory Used", "Memory Efficiency","GPUs Used","Time","WorkingDir","Cluster","Constraints"])
                 writer.writerows(allresults)
     else:
         with open(results_path,'a') as f:
             writer = csv.writer(f)
             writer.writerows(allresults)
+    if not os.path.exists(results_path+".failed"):
+            with open(results_path+".failed",'w') as f:
+                writer = csv.writer(f)
+                writer.writerow(["JobId", "JobType","State","NumFile","Threads","Time","Extra", "WorkingDir","Cluster","Constraints"])
+                writer.writerows(failed)
+    else:
+        with open(results_path+".failed",'a') as f:
+            writer = csv.writer(f)
+            writer.writerows(failed)
+    

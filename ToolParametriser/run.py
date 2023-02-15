@@ -27,7 +27,6 @@ def main(args):
             test=testcreator.MQTester(config=config)
         else:
             raise Exception("No accepted tooltype in config")
-        if args.usetmpl is  None:  args.usetmpl=False
         test.run_test()
 
     elif args.runtype.lower()=="analyse":
