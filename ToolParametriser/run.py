@@ -28,22 +28,22 @@ def main(args):
         else:
             raise Exception("No accepted tooltype in config")
         if args.usetmpl is  None:  args.usetmpl=False
-        test.run_test(usetmpl=args.usetmpl)
+        test.run_test()
 
     elif args.runtype.lower()=="analyse":
-        print("analyse")
-        jobs_completed_file=os.path.join(config['output']['path'],"jobs_completed.csv")
+        logging.info("Analysing completed jobs.....")
+        jobs_completed_file=config['output']['jobs_details_path']
         if 'results_file' not in config['output']:
             config['output']['result_file']="./allresults.csv"
         testresults.get(completed_jobs=jobs_completed_file,results_path=config['output']['results_file'])
-
+    else:
+        logging.info("Run Type (-R) Unkown")
+        raise Exception("Run Type (-R) Unkown, valid values include [run, analyse] ")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run/analyse a tool test')
     parser.add_argument('-c','--config_path', metavar='path', required=True,
                         help='the path to configuration file')
-    parser.add_argument('-T','--usetmpl', metavar="bool", required=False,
-                        help='whether to use old template if found or create a new one')
     parser.add_argument('-D','--dryrun', metavar="bool", required=False,
                         help='if true jobs will not run')
     parser.add_argument('-R','--runtype', metavar="str", required=True,

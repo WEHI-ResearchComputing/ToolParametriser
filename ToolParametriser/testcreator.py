@@ -11,6 +11,8 @@ class AbstractTester(ABC):
         super().__init__()
         self.tmplfile="" #Must be set by concrete class
         self.Config=config
+        if not os.path.exists(f'{os.path.expanduser("~")}/.toolparametriser/'):
+            os.makedirs(f'{os.path.expanduser("~")}/.toolparametriser/')
         FORMAT = '[%(asctime)s]:%(levelname)s:%(name)s:%(message)s'
         logging.basicConfig(format=FORMAT,filename=f'{os.path.expanduser("~")}/.toolparametriser/debug.log', 
                     encoding='utf-8', level=logging.DEBUG)
@@ -25,15 +27,10 @@ class AbstractTester(ABC):
         else:
             logging.fatal("Config file not valid")
             raise InvalidConfigObject
-        if not os.path.exists(f'{os.path.expanduser("~")}/.toolparametriser/'):
-            os.makedirs(f'{os.path.expanduser("~")}/.toolparametriser/')
+        
     
     @abstractmethod
     def create_jobscript_template(self,**kwargs):
-        pass
-        
-    @abstractmethod
-    def run(self,runID:str,parameters:dict):
         pass
     
     def get_tmpl_values(self,parameters:dict)->dict:
@@ -61,29 +58,26 @@ class AbstractTester(ABC):
             params['inputfiles']=parameters['inputfiles']
         return params
 
-    def run_jobscript(self,parameters:dict,runID:str):
+    def run_job(self,parameters:dict,runID:str):
         #Prepare values for tmpl
-        params=self.get_tmpl_values(parameters)
-                
-        ##Substitute Tmpl 
+        params=self.get_tmpl_values(parameters) 
+        #Substitute Tmpl 
         with open(os.path.join(self.Config["Output_path"],self.tmplfile), 'r') as f:
             template = Template(f.read())
             result = template.safe_substitute(params)
-        ##Save to file
+        #Save to file
         with open(os.path.join(self.Config["Output_path"],runID,"batch.slurm"), 'w') as f:
             f.write(result)
-        ##RUN if not dryrun
+        #RUN if not dryrun
         if not self.Config["dryrun"]:
                 os.system(f"cd {os.path.join(self.Config['Output_path'],runID)};"+ 
                     f"sbatch {os.path.join(self.Config['Output_path'],runID,'batch.slurm')}")
            
-
     ##TODO validate_config
     def validate_config(self)->bool:
 
         return True
-
-    ##TODO validate_test_parameters
+    ## TODO validate_test_parameters
     def validate_test_parameters(self)->bool:
 
         return True
@@ -100,7 +94,7 @@ class AbstractTester(ABC):
                 raise IOError
     
     
-    def prepare_run_dir(self,runID:str,params:dict):
+    def prepare_run_dir(self,runID:str,params:dict) -> str:
         outpath=os.path.join(self.Config["Output_path"],runID)
         os.makedirs(outpath)
         allinputfiles = glob.glob(self.Config['input']['path'], recursive=False)
@@ -118,25 +112,23 @@ class AbstractTester(ABC):
         if not os.path.exists(self.jobs_completed_file):
             with open(self.jobs_completed_file,'w+') as f:
                     writer = csv.writer(f)
-                    writer.writerow(["jobtype","jobid","partition","numfiles","cpuspertask","mem","threads","timelimit","constraints","extra"])
+                    writer.writerow(["jobtype","jobid","partition","numfiles","cpuspertask","mem","threads","timelimit","constraints","workingdir","extra"])
                     
-
+        return outpath
     
-    def run_test(self,usetmpl:bool):        
+    def run_test(self):        
         if self.validate_test_parameters():
             for parameters in self.Config["job_parameters"]:
                 for rep in range(self.Config["jobs"]["num_reps"]):
                     runID = f"repo-{parameters['jobname']}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-                    self.prepare_run_dir(runID=runID,params=parameters)
+                    outpath=self.prepare_run_dir(runID=runID,params=parameters)
                     self.create_jobscript_template()
-                    self.run(runID,parameters)
+                    self.run_job(runID=runID,parameters=parameters)
             with open(os.path.join(self.Config["Output_path"],'config.json'), 'w') as cfile:
                 cfile.write(json.dumps(self.Config))
         else:
             logging.fatal("Test Parameters file not valid.")
             raise InvalidTestParameters
-
-    
 
 class MQTester(AbstractTester):
     def __init__(self, config: dict) -> None:
@@ -144,9 +136,9 @@ class MQTester(AbstractTester):
         self.tmplfile="MQtemplate.tmpl"
         config["jobs"]["run_type"]=""
     
-    def run(self,runID,parameters):
+    def run_job(self,runID,parameters):
         self.update_xml(runID ,parameters)
-        self.run_jobscript(parameters,runID)
+        super().run_job(runID=runID,parameters=parameters)
 
     def create_jobscript_template(self):
         with open(os.path.join(self.Config["Output_path"],self.tmplfile), "w+") as fb:
@@ -168,7 +160,7 @@ class MQTester(AbstractTester):
             fb.writelines("MaxQuant mqpar.mod.xml\n")
 
             fb.writelines(
-                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${constraints},\" >> '+f'{self.jobs_completed_file}\n'
+                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${constraints},${workingdir},\" >> '+f'{self.jobs_completed_file}\n'
             )
 
     def validate_config(self) -> bool:
@@ -252,9 +244,9 @@ class DiaNNTester(AbstractTester):
             valid=False
         return valid
 
-    def run(self,runID,parameters):
+    def run_job(self,runID,parameters):
         parameters['inputfiles']=' --f '.join(self.get_input_files(runID=runID))
-        self.run_jobscript(parameters,runID)
+        super().run_job(runID=runID,parameters=parameters)
 
     def create_jobscript_template(self):
         with open(os.path.join(self.Config["Output_path"],self.tmplfile), "w+") as fb:
@@ -279,7 +271,7 @@ class DiaNNTester(AbstractTester):
             fb.writelines(" ${args} \n")
             
             fb.writelines(
-                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${constraints},type=${type}\" >> '+f'{self.jobs_completed_file}\n'
+                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${constraints},${workingdir},type=${type}\" >> '+f'{self.jobs_completed_file}\n'
             )
     """ 
     Method specific to Diann only

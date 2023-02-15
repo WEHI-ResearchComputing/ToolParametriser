@@ -51,13 +51,13 @@ def get(completed_jobs:str,results_path,use_GPUs:bool=True):
     allresults=[]
     '''
     Input: jobtype,jobid,partition,numfiles,cpuspertask,mem,threads,timelimit,constraints,extra
-    Output: JobId,Nodes,CPUs Used,CPUs Efficiency,Memory Used,Memory Efficiency,GPUs Used
+    Output: JobId,JobType,NumFiles,Threads,Extra,Nodes,CPUs Requested,CPUs Used,CPUs Efficiency,Memory Requested,Memory Used,Memory Efficiency,GPUs Used,Time,Cluster,Constraints
     '''
     jobs=pd.read_csv(completed_jobs,index_col=False)
     #Get job ids
     #jobids=",".join(map(str,pd.read_csv(executed_jobs,header=None)[0].tolist()))
     #list_of_executed_jobs=pd.read_csv(executed_jobs,header=None)[0].tolist()
-    
+  
     for index, executed_job in jobs.iterrows():
         result = subprocess.run(["seff", f"{executed_job['jobid']}"], stdout=subprocess.PIPE)
         if result.returncode==0:
@@ -73,7 +73,7 @@ def get(completed_jobs:str,results_path,use_GPUs:bool=True):
                 dct["Constraints"]=executed_job['constraints']
                 dct["GPUs"]=0
                 if use_GPUs:
-                    result = subprocess.run(["sacct",  "-j", f"{executed_job['jobid']}", "--format=ReqTres", "--parsable", "-X","--noheader"], stdout=subprocess.PIPE)
+                    result = subprocess.run(["sacct",  "-j", f"{executed_job['jobid']}", "--format=ReqTres", "--parsable", "-X","--noheader"],check=False, stdout=subprocess.PIPE)
                     
                     if result.returncode==0:
                         res=result.stdout.decode("utf-8")
@@ -84,7 +84,7 @@ def get(completed_jobs:str,results_path,use_GPUs:bool=True):
                 
                 if pd.isnull(executed_job["extra"]):
                     executed_job["extra"]=None
-                allresults.append([executed_job["jobid"],executed_job['numfiles'],executed_job["threads"],executed_job["extra"], dct["Nodes"],dct["CPUsReq"],dct["CPUsUsed"],dct["CPUEff"],dct["MemReq"],dct["MemUsed"],dct["MemEff"],dct["GPUs"],dct["time(s)"],dct['Cluster'],dct['Constraints']])
+                allresults.append([executed_job["jobid"],executed_job["jobtype"],executed_job['numfiles'],executed_job["threads"],executed_job["extra"], dct["Nodes"],dct["CPUsReq"],dct["CPUsUsed"],dct["CPUEff"],dct["MemReq"],dct["MemUsed"],dct["MemEff"],dct["GPUs"],dct["time(s)"],dct['Cluster'],dct['Constraints']])
             else:
                 logging.error(f"Job {executed_job['jobid']} is still running or has failed.")
 
@@ -93,7 +93,7 @@ def get(completed_jobs:str,results_path,use_GPUs:bool=True):
     if not os.path.exists(results_path):
             with open(results_path,'w') as f:
                 writer = csv.writer(f)
-                writer.writerow(["JobId", "NumFiles","Threads","Extra","Nodes", "CPUs Requested","CPUs Used","CPUs Efficiency","Memory Requested","Memory Used", "Memory Efficiency","GPUs Used","Time","Cluster","Constraints"])
+                writer.writerow(["JobId", "JobType","NumFiles","Threads","Extra","Nodes", "CPUs Requested","CPUs Used","CPUs Efficiency","Memory Requested","Memory Used", "Memory Efficiency","GPUs Used","Time","Cluster","Constraints"])
                 writer.writerows(allresults)
     else:
         with open(results_path,'a') as f:
