@@ -26,7 +26,8 @@ def main(args):
         elif config["jobs"]["tool_type"].lower()=="mq":
             test=testcreator.MQTester(config=config)
         else:
-            raise Exception("No accepted tooltype in config")
+            test=testcreator.FromCMDTester(config=config)
+            #raise Exception("No accepted tooltype in config")
         test.run_test()
 
     elif args.runtype.lower()=="analyse":
