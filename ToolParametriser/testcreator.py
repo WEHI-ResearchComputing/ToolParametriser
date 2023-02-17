@@ -56,7 +56,8 @@ class AbstractTester(ABC):
             'threads': parameters["threads"], 
             'timelimit':parameters["timelimit"],
             'ntasks':ntasks,
-            'email':config["jobs"]["email"]
+            'email':config["jobs"]["email"],
+            'qos':config["jobs"]["qos"]
         }
         params['constraints']=None
         if 'constraints'  in parameters.keys():
@@ -157,7 +158,7 @@ class MQTester(AbstractTester):
             fb.writelines("#SBATCH --output=slurm-%j.out\n")
             fb.writelines("#SBATCH --mail-type=ALL,ARRAY_TASKS\n")
             fb.writelines("#SBATCH --mail-user=${email}\n")
-           
+            fb.writelines("#SBATCH --qos=${qos}\n")
             fb.writelines("#SBATCH --constraint=${constraints}\n")
 
             fb.writelines("module load MaxQuant/2.0.2.0\n")
@@ -265,7 +266,7 @@ class DiaNNTester(AbstractTester):
             fb.writelines("#SBATCH --output=slurm-%j.out\n")
             fb.writelines("#SBATCH --mail-type=ALL,ARRAY_TASKS\n")
             fb.writelines("#SBATCH --mail-user=${email}\n")
-           
+            fb.writelines("#SBATCH --qos=${qos}\n")
             fb.writelines("#SBATCH --constraint=${constraints}\n")
             fb.writelines("module use /stornext/System/data/modulefiles/sysbio\n")
             fb.writelines("module load DiaNN/1.8\n")
@@ -330,7 +331,7 @@ class FromCMDTester(AbstractTester):
             fb.writelines("#SBATCH --output=slurm-%j.out\n")
             fb.writelines("#SBATCH --mail-type=ALL,ARRAY_TASKS\n")
             fb.writelines("#SBATCH --mail-user=${email}\n")
-           
+            fb.writelines("#SBATCH --qos=${qos}\n")
             fb.writelines("#SBATCH --constraint=${constraints}\n")
 
             fb.writelines("${modules}\n")
@@ -338,7 +339,7 @@ class FromCMDTester(AbstractTester):
                 fb.writelines(f"{self.Config['jobs']['cmd']}\n")
             
             fb.writelines(
-                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${constraints},${workingdir},type=${type}\" >> '+f'{self.jobs_completed_file}\n'
+                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${qos},${constraints},${workingdir},type=${type}\" >> '+f'{self.jobs_completed_file}\n'
             )
     
     def _run_job(self,runID,parameters,work_dir):
