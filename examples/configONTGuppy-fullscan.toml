@@ -11,9 +11,9 @@ name="guppy-gpu/6.2.1"
 path = "/vast/scratch/users/yang.e/guppy-benchmarkme" 
 
 [jobs]
-cmd="guppy_basecaller -i pea_DNA_sample --num_callers ${num_callers} -x 'cuda:all' -c ${model} -s pea_DNA_sample_basecalled"
+cmd="guppy_basecaller -i pea_DNA_sample --num_callers ${num_callers} -x 'cuda:all' -c ${model} -s pea_DNA_sample_basecalled --chunks_per_runner ${chunks_per_runner}"
 num_reps = 1 
-params_path = "/vast/scratch/users/yang.e/ToolParametriser/examples/ONTGuppy-profile.csv" 
+params_path = "/vast/scratch/users/yang.e/ToolParametriser/examples/ONTGuppy-profile-fullscan.csv" 
 tool_type="guppy"
 run_type=""
 email=""
