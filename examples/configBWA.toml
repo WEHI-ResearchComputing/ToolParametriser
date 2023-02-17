@@ -1,6 +1,6 @@
 [input]
 type="dir"
-path = "/vast/scratch/users/iskander.j/inputs/samples/sample*"
+path = "/vast/projects/RCP/23-02-new-nodes-testing/bwa-gatk/bwa-test-files/samples"
 
 
 [[modules]]
@@ -10,19 +10,20 @@ name="bwa/0.7.17"
 name="gatk/4.2.5.0"
 
 [output]
-path = "/vast/scratch/users/iskander.j/test" 
+path = "/vast/scratch/users/yang.e/bwagatk-benchmarkme-results" 
 
 [jobs]
 cmd="bwa mem -t ${threads} -K 10000000 -R '@RG\\tID:sample_rg1\\tLB:lib1\\tPL:bar\\tSM:sample\\tPU:sample_rg1' ${reference} ${input_path} | gatk SortSam --java-options -Xmx30g --MAX_RECORDS_IN_RAM 250000 -I /dev/stdin -O out.bam --SORT_ORDER coordinate"
 num_reps = 1 
-params_path = "/vast/scratch/users/iskander.j/ToolParametriser/examples/IGenricbenchmarking-profiles.csv" 
+params_path = "/vast/scratch/users/yang.e/ToolParametriser/examples/IGenricbenchmarking-profiles.csv" 
 tool_type="bwa"
 run_type=""
 email=""
+qos="preempt"
 
 [[cmd_placeholder]]
 name="reference"
-path="/vast/scratch/users/iskander.j/inputs/Homo_sapiens_assembly38.fasta"
+path="/vast/projects/RCP/23-02-new-nodes-testing/bwa-gatk/bwa-test-files/Homo_sapiens_assembly38.fasta"
 [[cmd_placeholder]]
 name="input_path"
-path="sample*/*"
+path="samples/*"
