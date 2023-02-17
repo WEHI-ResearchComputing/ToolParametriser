@@ -45,21 +45,26 @@ class AbstractTester(ABC):
         ntasks=1
         if 'ntasks'  in parameters.keys():
             ntasks=parameters["ntasks"]
-        params={
-            'jobtype':f'{config["jobs"]["tool_type"]}_{config["jobs"]["run_type"]}',
-            'workingdir':work_dir,
-            'partition': parameters["partition"], 
-            'jobname': parameters["jobname"], 
-            'numfiles': parameters["numfiles"], 
-            'cpuspertask': parameters["cpuspertask"], 
-            'mem': parameters["mem"], 
-            'threads': parameters["threads"], 
-            'timelimit':parameters["timelimit"],
-            'ntasks':ntasks,
-            'email':config["jobs"]["email"],
-            'qos':config["jobs"]["qos"]
-        }
-        params['constraints']=None
+        # params={
+        #     'jobtype':f'{config["jobs"]["tool_type"]}_{config["jobs"]["run_type"]}',
+        #     'workingdir':work_dir,
+        #     'partition': parameters["partition"], 
+        #     'jobname': parameters["jobname"], 
+        #     'numfiles': parameters["numfiles"], 
+        #     'cpuspertask': parameters["cpuspertask"], 
+        #     'mem': parameters["mem"], 
+        #     'threads': parameters["threads"], 
+        #     'timelimit':parameters["timelimit"],
+        #     'ntasks':ntasks,
+        #     'email':config["jobs"]["email"],
+        #     'qos':config["jobs"]["qos"]
+        # }
+        params = parameters
+        params['jobtype'] = f'{config["jobs"]["tool_type"]}_{config["jobs"]["run_type"]}'
+        params['workingdir'] = work_dir
+        params['ntasks'] = ntasks
+        params['email'] = config["jobs"]["email"]
+        params['qos'] = config["jobs"]["qos"]
         if 'constraints'  in parameters.keys():
             params['constraints']=parameters['constraints']
 
@@ -328,6 +333,7 @@ class FromCMDTester(AbstractTester):
             fb.writelines("#SBATCH --time=${timelimit}\n")
             fb.writelines("#SBATCH --cpus-per-task=${cpuspertask}\n")
             fb.writelines("#SBATCH --mem=${mem}G\n")
+            fb.writelines("#SBATCH --gres=${gres}\n")
             fb.writelines("#SBATCH --output=slurm-%j.out\n")
             fb.writelines("#SBATCH --mail-type=ALL,ARRAY_TASKS\n")
             fb.writelines("#SBATCH --mail-user=${email}\n")
