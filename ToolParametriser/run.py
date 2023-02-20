@@ -2,18 +2,17 @@
 
 import testcreator,testresults
 import tomllib
-import logging,os,errno
+import logging,os,utils
 import argparse
+utils.setlogging()
 
 
 def main(args):
   
-    if not os.path.exists(f'{os.path.expanduser("~")}/.toolparametriser/'):
-        os.makedirs(f'{os.path.expanduser("~")}/.toolparametriser/')
+    
     if not os.path.exists(args.config_path):
         logging.fatal("Config file does not exit")
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), args.config_path)
-            
+        exit()            
     with open(args.config_path, "rb") as f:
         config = tomllib.load(f)
     if args.dryrun is not None:
@@ -37,8 +36,8 @@ def main(args):
             config['output']['result_file']="./allresults.csv"
         testresults.get(completed_jobs=jobs_completed_file,results_path=config['output']['results_file'])
     else:
-        logging.info("Run Type (-R) Unkown")
-        raise Exception("Run Type (-R) Unkown, valid values include [run, analyse] ")
+        logging.fatal("Run Type (-R) Unkown, valid values include [run, analyse]")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run/analyse a tool test')

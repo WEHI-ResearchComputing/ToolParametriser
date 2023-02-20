@@ -4,18 +4,15 @@ import csv,json
 import random,os
 import logging,glob,shutil,errno
 from string import Template
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ET, utils
+utils.setlogging()
 
 class AbstractTester(ABC):
     def __init__(self,config:dict) -> None:
         super().__init__()
         self.tmplfile="" #Must be set by concrete class
         self.Config=config
-        if not os.path.exists(f'{os.path.expanduser("~")}/.toolparametriser/'):
-            os.makedirs(f'{os.path.expanduser("~")}/.toolparametriser/')
-        FORMAT = '[%(asctime)s]:%(levelname)s:%(name)s:%(message)s'
-        logging.basicConfig(format=FORMAT,filename=f'{os.path.expanduser("~")}/.toolparametriser/debug.log', 
-                    encoding='utf-8', level=logging.DEBUG)
+        
         self.jobs_completed_file=os.path.join(self.Config['output']['path'],"jobs_completed.csv")
         if not os.path.exists(self.Config['output']['path']):
             os.makedirs(self.Config['output']['path'])
@@ -31,10 +28,10 @@ class AbstractTester(ABC):
                 self._get_test_parameters()
             else:
                 logging.fatal("Test Job parameters not valid")
-                raise InvalidConfigObject
+                exit()
         else:
             logging.fatal("Config file not valid")
-            raise InvalidConfigObject
+            exit()
 
     @abstractmethod
     def _create_jobscript_template(self,**kwargs):
@@ -45,7 +42,7 @@ class AbstractTester(ABC):
 
         # initialise parameters with config job parameters
         params = config["jobs"]
-
+        params["workdif"]=work_dir
         # join with job profile parameters (job profile takes precedence)
         params.update(parameters)
 
@@ -85,12 +82,19 @@ class AbstractTester(ABC):
         try:
             with open(self.Config['jobs']['params_path'], "r") as file:
                 self.Config["job_parameters"]=list(csv.DictReader(file))
-        except IOError:
-            if IOError.errno == errno.EACCES:
+        except IOError as e:
+            if e.errno == errno.EACCES:  
                 logging.fatal("Test parameters file exists, but isn't readable")
-            elif IOError.errno == errno.ENOENT:
+                exit()
+            elif e.errno == errno.ENOENT:
                 logging.fatal("Test parameters file isn't readable because it isn't there")
-                raise IOError
+                exit()
+            else:
+                logging.fatal(f"Test parameters file error: {str(e.errno)}")
+                exit()
+        except Exception as e:
+                logging.fatal(f"Test parameters file error: {e}")
+                exit()
     
     def __prepare_run_dir(self,runID:str,params:dict) -> str:
         outpath=os.path.join(self.Config["Output_path"],runID)
@@ -182,8 +186,8 @@ class MQTester(AbstractTester):
     def __update_xml(self,runID:str,parameters:dict) -> None:
         xml_path=next(item['path'] for item in self.Config["extra"] if item["name"] == "xml")
         if not os.path.exists(xml_path):
-            logging.error(f"No xml file found.")
-            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), xml_path)
+            logging.fatal(f"No xml file found.")
+            exit()
         else:
             tree = ET.parse(xml_path)
             outputfile=os.path.join(self.Config["Output_path"],runID,"mqpar.mod.xml")
@@ -194,18 +198,15 @@ class MQTester(AbstractTester):
                 if winpath != None:
                     linuxpath=os.path.join(self.Config["Output_path"],runID,winpath.split("\\")[-1])
                     if(os.path.exists(linuxpath)):
-                        logging.debug(f"{linuxpath} exists")
                         filepath_tag.text=linuxpath
-                        logging.info(f"Updating filepath : {linuxpath}")
                         numfiles=numfiles+1
                     else:
                         root.findall('filePaths')[0].remove(filepath_tag)
-            logging.info(f"Updated {numfiles} files.")
+            
             winfastapath=root.findall('fastaFiles/FastaFileInfo/fastaFilePath')[0].text
             if winfastapath != None:
                 linuxfastapath=os.path.join(os.path.abspath(os.getcwd()),winfastapath.split("\\")[-1])
             
-                logging.info(f"Updating fastapath : {linuxfastapath}")
                 if(os.path.exists(linuxfastapath)):
                         root.findall('fastaFiles/FastaFileInfo/fastaFilePath')[0].text=linuxfastapath
             
@@ -215,7 +216,6 @@ class MQTester(AbstractTester):
             numthreads=parameters["threads"]
             numthreads = numfiles if (numfiles != 0) and (numthreads==0) else numthreads
             root.findall('numThreads')[0].text=str(numthreads)
-            logging.info(f"Threads set to {numthreads}.")
             logging.info(f"Saving new xml file : {outputfile}")
             tree.write(outputfile)
 
@@ -254,6 +254,10 @@ class DiaNNTester(AbstractTester):
         super()._run_job(runID=runID,parameters=parameters,work_dir=work_dir)
 
     def _create_jobscript_template(self,**kwargs):
+
+
+
+
         with open(os.path.join(self.Config["Output_path"],self.tmplfile), "w+") as fb:
             fb.writelines("#!/bin/bash\n")
             fb.writelines("#SBATCH -p ${partition}\n")
