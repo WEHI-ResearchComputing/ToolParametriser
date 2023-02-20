@@ -1,0 +1,5 @@
+jobname,cpuspertask,threads,constraints
+G-1,8,8,Skylake
+G-2,16,16,Broadwell
+G-3,8,8,Skylake
+G-4,16,16,Broadwell
