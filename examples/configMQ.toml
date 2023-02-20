@@ -16,3 +16,4 @@ num_reps = 1
 params_path = "/vast/scratch/users/iskander.j/ToolParametriser/examples/MQbenchmarking-profiles.csv" 
 tool_type="MQ"
 email=""
+qos="normal"

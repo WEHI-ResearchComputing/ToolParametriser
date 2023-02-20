@@ -16,3 +16,4 @@ params_path = "/vast/scratch/users/iskander.j/ToolParametriser/examples/DiaNNben
 tool_type="DiaNN"
 run_type="libfree"
 email=""
+qos="normal"

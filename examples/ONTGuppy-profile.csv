@@ -1,0 +1,3 @@
+partition,jobname,numfiles,cpuspertask,mem,gres,threads,timelimit,constraints,num_callers
+gpuq,G-1,1,24,124,gpu:A30:1,8,24:00:00,,1
+gpuq,G-2,1,24,124,gpu:A30:2,8,24:00:00,,2
