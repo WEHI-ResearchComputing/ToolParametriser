@@ -42,34 +42,19 @@ class AbstractTester(ABC):
     
     def _get_tmpl_values(self,parameters:dict,work_dir:str)->dict:
         config=self.Config
-        ntasks=1
-        if 'ntasks'  in parameters.keys():
-            ntasks=parameters["ntasks"]
-        # params={
-        #     'jobtype':f'{config["jobs"]["tool_type"]}_{config["jobs"]["run_type"]}',
-        #     'workingdir':work_dir,
-        #     'partition': parameters["partition"], 
-        #     'jobname': parameters["jobname"], 
-        #     'numfiles': parameters["numfiles"], 
-        #     'cpuspertask': parameters["cpuspertask"], 
-        #     'mem': parameters["mem"], 
-        #     'threads': parameters["threads"], 
-        #     'timelimit':parameters["timelimit"],
-        #     'ntasks':ntasks,
-        #     'email':config["jobs"]["email"],
-        #     'qos':config["jobs"]["qos"]
-        # }
-        params = parameters
-        params['jobtype'] = f'{config["jobs"]["tool_type"]}_{config["jobs"]["run_type"]}'
-        params['workingdir'] = work_dir
-        params['ntasks'] = ntasks
-        params['email'] = config["jobs"]["email"]
-        params['qos'] = config["jobs"]["qos"]
-        if 'constraints'  in parameters.keys():
-            params['constraints']=parameters['constraints']
 
-        if 'inputfiles'  in parameters.keys():
-            params['inputfiles']=parameters['inputfiles']
+        # initialise parameters with config job parameters
+        params = config["jobs"]
+
+        # join with job profile parameters (job profile takes precedence)
+        params.update(parameters)
+
+        if 'ntasks' not in params.keys():
+            params['ntasks'] = 1
+
+        # important that "jobtype" is uniform across all jobs
+        params['jobtype'] = f'{config["jobs"]["tool_type"]}_{config["jobs"]["run_type"]}'
+
         return params
 
     def _run_job(self,parameters:dict,runID:str,work_dir:str):
@@ -111,7 +96,15 @@ class AbstractTester(ABC):
         outpath=os.path.join(self.Config["Output_path"],runID)
         os.makedirs(outpath)
         allinputfiles = glob.glob(self.Config['input']['path'], recursive=False)
-        runfiles = random.sample(allinputfiles, k=int(params["numfiles"]))
+        try:
+            if "numfiles" in params.keys(): 
+                runfiles = random.sample(allinputfiles, k=int(params["numfiles"]))
+            else:
+                runfiles = random.sample(allinputfiles, k=int(self.Config["jobs"]["numfiles"]))
+        except KeyError:
+            logging.fatal('"numfiles" parameter not provided in either config TOML or profiles CSV files.')
+            raise KeyError
+
         for runfile in runfiles:
             name_of_folder = runfile.split("/")[-1]
             try:
@@ -153,6 +146,7 @@ class MQTester(AbstractTester):
 
     def _create_jobscript_template(self,**kwargs):
         with open(os.path.join(self.Config["Output_path"],self.tmplfile), "w+") as fb:
+            
             fb.writelines("#!/bin/bash\n")
             fb.writelines("#SBATCH -p ${partition}\n")
             fb.writelines("#SBATCH --job-name=${jobname}\n")

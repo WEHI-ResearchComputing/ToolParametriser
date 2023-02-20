@@ -1,0 +1,36 @@
+[input]
+type="dir"
+path = "/vast/projects/RCP/23-02-new-nodes-testing/bwa-gatk/bwa-test-files/samples"
+
+[[modules]]
+use="/stornext/System/data/modulefiles/bioinf/its"
+name="bwa/0.7.17"
+[[modules]]
+name="gatk/4.2.5.0"
+
+[output]
+path = "/vast/scratch/users/yang.e/bwagatk-benchmarkme-results" 
+
+[jobs]
+cmd="bwa mem -t ${threads} -K 10000000 -R '@RG\\tID:sample_rg1\\tLB:lib1\\tPL:bar\\tSM:sample\\tPU:sample_rg1' ${reference} ${input_path} | gatk SortSam --java-options -Xmx30g --MAX_RECORDS_IN_RAM 250000 -I /dev/stdin -O out.bam --SORT_ORDER coordinate"
+num_reps = 1 
+params_path = "/vast/scratch/users/yang.e/ToolParametriser/examples/BWA-profile2.csv" 
+tool_type="bwa"
+run_type=""
+email=""
+qos="bonus"
+partition="regular"
+gres="gpu:0"
+timelimit="3:00:00"
+numfiles=1
+mem=15
+# these will be overridden by BWA-profile2.csv
+cpuspertask=6 
+threads=4
+
+[[cmd_placeholder]]
+name="reference"
+path="/vast/projects/RCP/23-02-new-nodes-testing/bwa-gatk/bwa-test-files/Homo_sapiens_assembly38.fasta"
+[[cmd_placeholder]]
+name="input_path"
+path="samples/*"
