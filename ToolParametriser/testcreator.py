@@ -99,7 +99,15 @@ class AbstractTester(ABC):
     def __prepare_run_dir(self,runID:str,params:dict) -> str:
         outpath=os.path.join(self.Config["Output_path"],runID)
         os.makedirs(outpath)
-        allinputfiles = glob.glob(self.Config['input']['path'], recursive=False)
+
+        # testing if user has specified 
+        try:
+            allinputfiles = glob.glob(self.Config['input']['path'], recursive=False)
+        except KeyError:
+            # below commented statemnt should be placed in a "pre-screening" function
+            # logging.info('"Input" not specified in config toml file. Not copying files to output directory.')
+            return outpath
+
         try:
             if "numfiles" in params.keys(): 
                 runfiles = random.sample(allinputfiles, k=int(params["numfiles"]))
