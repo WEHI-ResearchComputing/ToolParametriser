@@ -1,7 +1,3 @@
-[input]
-type="dir"
-path = "/vast/projects/RCP/23-02-new-nodes-testing/bwa-gatk/bwa-test-files/samples"
-
 [[modules]]
 use="/stornext/System/data/modulefiles/bioinf/its"
 name="bwa/0.7.17"
@@ -33,4 +29,4 @@ name="reference"
 path="/vast/projects/RCP/23-02-new-nodes-testing/bwa-gatk/bwa-test-files/Homo_sapiens_assembly38.fasta"
 [[cmd_placeholder]]
 name="input_path"
-path="samples/*"
+path="/vast/projects/RCP/23-02-new-nodes-testing/bwa-gatk/bwa-test-files/samples/*"
