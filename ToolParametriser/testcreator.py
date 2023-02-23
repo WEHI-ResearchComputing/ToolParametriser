@@ -90,7 +90,7 @@ class AbstractTester(ABC):
                 logging.fatal("Test parameters file isn't readable because it isn't there")
                 exit()
             else:
-                logging.fatal(f"Test parameters file error: {str(e.errno)}")
+                logging.fatal(f"Test parameters file error: {str(e)}")
                 exit()
         except Exception as e:
                 logging.fatal(f"Test parameters file error: {e}")

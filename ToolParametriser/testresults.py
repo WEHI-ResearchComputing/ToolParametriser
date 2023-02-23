@@ -7,6 +7,8 @@ import pandas as pd
 import logging,csv,math
 
 def clean(dct):
+    if "Nodes" not in dct:
+        dct["Nodes"]=1
     # Turn hours into seconds (s)
     job_wall_clock_splitted = dct["Job Wall-clock time"].replace("-", ":").split(":")
     if len(job_wall_clock_splitted) > 3:
@@ -29,11 +31,16 @@ def clean(dct):
     dct["CPUEff"] = dct["CPU Efficiency"].split("%")[0]
 
     # CPUsUsed
+    if "Cores per node" in dct:
+        cores_key="Cores per node"
+    else:
+        cores_key="Cores"
+
     dct["CPUsUsed"] = (
-        int(dct["Cores per node"])*int(dct["Nodes"]) * int(float(dct["CPUEff"])) / 100
+        int(dct[cores_key])*int(dct["Nodes"]) * int(float(dct["CPUEff"])) / 100
     )
     dct["CPUsReq"] = (
-        int(dct["Cores per node"])*int(dct["Nodes"])
+        int(dct[cores_key])*int(dct["Nodes"])
     )
     # Memory Requested
     memory_efficiency_splitted = dct["Memory Efficiency"].split()

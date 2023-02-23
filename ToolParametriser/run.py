@@ -1,5 +1,6 @@
 #!/stornext/HPCScratch/home/iskander.j/myenvs/py3_11/bin/python
 
+import errno
 import testcreator,testresults
 import tomllib
 import logging,os,utils
@@ -12,9 +13,20 @@ def main(args):
     
     if not os.path.exists(args.config_path):
         logging.fatal("Config file does not exit")
-        exit()            
-    with open(args.config_path, "rb") as f:
-        config = tomllib.load(f)
+        exit() 
+    try:           
+        with open(args.config_path, "rb") as f:
+            config = tomllib.load(f)
+    except IOError as e:
+            if e.errno == errno.EACCES:  
+                logging.fatal("Config file exists, but isn't readable")
+                exit()
+            elif e.errno == errno.ENOENT:
+                logging.fatal("Config file isn't readable because it isn't there")
+                exit()
+            else:
+                logging.fatal(f"Config file error: {str(e)}")
+                exit()
     if args.dryrun is not None:
         config["dryrun"]=args.dryrun
     else:config["dryrun"]= False
