@@ -1,8 +1,3 @@
-[input]
-type="dir"
-path = "/vast/projects/RCP/pea_DNA_sample"
-
-
 [[modules]]
 use="/stornext/System/data/modulefiles/nvidia"
 name="guppy-gpu/6.2.1"
@@ -11,7 +6,7 @@ name="guppy-gpu/6.2.1"
 path = "/vast/scratch/users/yang.e/guppy-benchmarkme" 
 
 [jobs]
-cmd="guppy_basecaller -i pea_DNA_sample --num_callers ${num_callers} -x 'cuda:all' -c ${model} -s pea_DNA_sample_basecalled --chunks_per_runner ${chunks_per_runner}"
+cmd="guppy_basecaller -i ${input_path} --num_callers ${num_callers} -x 'cuda:all' -c ${model} -s pea_DNA_sample_basecalled --chunks_per_runner ${chunks_per_runner}"
 num_reps = 1 
 params_path = "/vast/scratch/users/yang.e/ToolParametriser/examples/ONTGuppy-profile-fullscan.csv" 
 tool_type="guppy"
@@ -22,3 +17,7 @@ qos="bonus"
 [[cmd_placeholder]]
 name="model"
 path="dna_r10.4.1_e8.2_400bps_sup.cfg"
+
+[[cmd_placeholder]]
+name="input_path"
+path="/vast/projects/RCP/pea_DNA_sample"
