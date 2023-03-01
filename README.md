@@ -1,6 +1,8 @@
 # Tool Parametriser
 A tool to make benchmarking and parameterising HPC tools easier and streamlined.
 
+When running a new tool on a HPC, researchers find it challenging to chose the resources required for the job and also how the resources scale with the size of the input dataset. This tool helps researchers answer these kind of questions and also helps Research Computing teams recommed best combination of resources for specific tool. 
+
 ## How it works
 The user have two prepare two files
 * Configuration (Config) File
