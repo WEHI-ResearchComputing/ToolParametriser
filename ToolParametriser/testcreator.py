@@ -19,7 +19,7 @@ class AbstractTester(ABC):
         if not os.path.exists(self.jobs_completed_file):
             with open(self.jobs_completed_file,'w+') as f:
                     writer = csv.writer(f)
-                    writer.writerow(["jobtype","jobid","partition","numfiles","cpuspertask","mem","threads","timelimit","constraints","workingdir","extra"])
+                    writer.writerow(["jobtype","jobid","partition","numfiles","cpuspertask","mem","threads","timelimit","qos","constraints","workingdir","extra"])
                     
         if self._validate_config():
             self.Config["Output_path"] = os.path.join(config['output']['path'],config['jobs']['tool_type']+"_"+datetime.now().strftime('%Y%m%d%H%M%S'))
@@ -177,7 +177,7 @@ class MQTester(AbstractTester):
             fb.writelines("MaxQuant mqpar.mod.xml\n")
 
             fb.writelines(
-                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${constraints},${workdir},\" >> '+f'{self.jobs_completed_file}\n'
+                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${qos},${constraints},${workdir},\" >> '+f'{self.jobs_completed_file}\n'
             )
 
     def _validate_config(self) -> bool:
@@ -288,7 +288,7 @@ class DiaNNTester(AbstractTester):
             fb.writelines(" ${args} \n")
             
             fb.writelines(
-                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${constraints},${workingdir},type=${type}\" >> '+f'{self.jobs_completed_file}\n'
+                'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${qos},${constraints},${workingdir},type=${type}\" >> '+f'{self.jobs_completed_file}\n'
             )
     """ 
     Method specific to Diann only
