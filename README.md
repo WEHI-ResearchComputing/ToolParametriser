@@ -108,7 +108,6 @@ The jobs' profiles are stored in a CSV file, and must be linked to in the config
 params_path="/path/to/jobsprofile.csv"
 ```
 Column headers in the jobs profile CSV file correspond to job Slurm parameters or command placeholders. If a column exists in both the jobs profile CSV and the config TOML file, then the former takes precedence. An example of this scenario is in `examples/configBWA2.toml` and `examples/BWA-profile2.csv`.
-```
 
 ## To run a test
 ```
