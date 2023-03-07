@@ -1,7 +1,38 @@
 # Tool Parametriser
 A tool to make benchmarking and parameterising HPC tools easier and streamlined.
 
-When running a new tool on a HPC, researchers find it challenging to chose the resources required for the job and also how the resources scale with the size of the input dataset. This tool helps researchers answer these kind of questions and also helps Research Computing teams recommed best combination of resources for specific tool. 
+When running a new tool on a HPC, researchers find it challenging to chose the resources required for the job and also how the resources scale with the size of the input dataset. This tool helps researchers answer these kind of questions and also helps Research Computing teams recommed best combination of resources for specific tool.
+
+## Install
+**Requires Python 3.11**
+```
+pip install git+ssh://git@github.com/WEHI-ResearchComputing/ToolParametriser.git
+```
+Note that this repository is privaten and installation needs read permissions.
+
+Example configuration files are located in the `examples` directory of this repo.
+
+## To run a test
+```
+toolparameteriser -c <configfile> -R run
+```
+Test config file examples are found in `examples`
+* MQ `configMQ.toml`
+* Diann `configDiaNN_lib.toml` and `configDiaNN_libfree.toml`
+* bwa `configBWA.toml`
+* ONT guppy `configONTGuppy.toml`
+* ONT guppy "real" parameter run-time parameter scan `configONTGuppy-fullscan.toml`
+
+## To collect test results
+
+Another config file needs to be created with the `[output]` table and the `jobs_details_path` and `results_file` keys.
+* `jobs_details_path` should be pointed to the `jobs_completed.csv` file that can be found in the `path` key in the `[output]` table of the run config file.
+* `results_file` is the file in which to place the parsed output. This will be in CSV format.
+
+```
+toolparameteriser -c <configfile> -R analyse
+```
+The output file will be a CSV file where each row corresponds to a job found in the `jobs_detail_path` CSV file. It will add CPU and memory effeciency data, and elapsed wall time retrieved from the `seff` command along with other periferal information about the job. 
 
 ## How it works
 The user have two prepare two files
@@ -108,25 +139,3 @@ The jobs' profiles are stored in a CSV file, and must be linked to in the config
 params_path="/path/to/jobsprofile.csv"
 ```
 Column headers in the jobs profile CSV file correspond to job Slurm parameters or command placeholders. If a column exists in both the jobs profile CSV and the config TOML file, then the former takes precedence. An example of this scenario is in `examples/configBWA2.toml` and `examples/BWA-profile2.csv`.
-
-## To run a test
-```
-./run.py -c <configfile> -R run
-```
-Test config file examples are found in `examples`
-* MQ `configMQ.toml`
-* Diann `configDiaNN_lib.toml` and `configDiaNN_libfree.toml`
-* bwa `configBWA.toml`
-* ONT guppy `configONTGuppy.toml`
-* ONT guppy "real" parameter run-time parameter scan `configONTGuppy-fullscan.toml`
-
-## To collect test results
-
-Another config file needs to be created with the `[output]` table and the `jobs_details_path` and `results_file` keys.
-* `jobs_details_path` should be pointed to the `jobs_completed.csv` file that can be found in the `path` key in the `[output]` table of the run config file.
-* `results_file` is the file in which to place the parsed output. This will be in CSV format.
-
-```
-./run.py -c <configfile> -R analyse
-```
-The output file will be a CSV file where each row corresponds to a job found in the `jobs_detail_path` CSV file. It will add CPU and memory effeciency data, and elapsed wall time retrieved from the `seff` command along with other periferal information about the job. 
