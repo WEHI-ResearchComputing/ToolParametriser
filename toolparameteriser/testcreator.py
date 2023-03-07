@@ -4,8 +4,9 @@ import csv,json
 import random,os
 import logging,glob,shutil,errno
 from string import Template
-import xml.etree.ElementTree as ET, utils
-utils.setlogging()
+import xml.etree.ElementTree as ET
+import toolparameteriser.utils
+toolparameteriser.utils.setlogging()
 
 class AbstractTester(ABC):
     def __init__(self,config:dict) -> None:

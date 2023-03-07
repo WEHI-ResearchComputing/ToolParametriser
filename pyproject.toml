@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "toolparameteriser"
+version = "0.1.0"
+description = "A Python package to benchmark tools and perform parameter scans using a Slurm scheduler."
+authors = ["Julie Iskander <iskander.j@wehi.edu.au>", "Edward Yang <yang.e@wehi.edu.au>"]
+readme = "README.md"
+license = "LGPL-3.0-only"
+
+[tool.poetry.dependencies]
+python = ">=3.11"
+pandas = ">=1.5.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+toolparameteriser = "toolparameteriser.run:main"

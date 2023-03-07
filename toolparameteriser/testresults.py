@@ -1,5 +1,3 @@
-#!/stornext/HPCScratch/home/iskander.j/myenvs/py3_11/bin/python
-
 import csv
 import os
 import subprocess
