@@ -41,13 +41,13 @@ def main(args=None):
     else:config["dryrun"]= False
 
     if args.runtype.lower()=="run":
-        if config["jobs"]["tool_type"].lower()=="diann":
-            test=toolparameteriser.testcreator.DiaNNTester(config=config)
-        elif config["jobs"]["tool_type"].lower()=="mq":
-            test=toolparameteriser.testcreator.MQTester(config=config)
-        else:
-            test=toolparameteriser.testcreator.FromCMDTester(config=config)
-            #raise Exception("No accepted tooltype in config")
+        match config["jobs"]["tool_type"].lower():
+            case "diann":
+                test=toolparameteriser.testcreator.DiaNNTester(config=config)
+            case "mq":
+                test=toolparameteriser.testcreator.MQTester(config=config) 
+            case _:
+                test=toolparameteriser.testcreator.FromCMDTester(config=config)
         test.run_test()
 
     elif args.runtype.lower()=="analyse":
