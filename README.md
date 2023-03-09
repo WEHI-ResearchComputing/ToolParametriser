@@ -25,14 +25,27 @@ Test config file examples are found in `examples`
 
 ## To collect test results
 
-Another config file needs to be created with the `[output]` table and the `jobs_details_path` and `results_file` keys.
+Another config file needs to be created with the `[output]` table and the `jobs_details_path` and `results_file` keys. For example, `configAnalysis.toml` in [the examples directory](https://github.com/WEHI-ResearchComputing/ToolParametriser/blob/main/examples/configAnalysis.toml):
+```
+[output]
+jobs_details_path = "/vast/scratch/users/iskander.j/test2/jobs_dev.csv" 
+results_file="/vast/scratch/users/iskander.j/test2/devresults.csv"
+```
 * `jobs_details_path` should be pointed to the `jobs_completed.csv` file that can be found in the `path` key in the `[output]` table of the run config file.
 * `results_file` is the file in which to place the parsed output. This will be in CSV format.
 
+Collect the results with
 ```
 toolparameteriser -c <configfile> -R analyse
 ```
-The output file will be a CSV file where each row corresponds to a job found in the `jobs_detail_path` CSV file. It will add CPU and memory effeciency data, and elapsed wall time retrieved from the `seff` command along with other periferal information about the job. 
+The reuslts file will be a CSV file where each row corresponds to a job found in the `jobs_detail_path` CSV file. It will add CPU and memory effeciency data, and elapsed wall time retrieved from the `seff` command along with other periferal information about the job. For example:
+```
+JobId,JobType,NumFiles,Threads,Extra,Nodes,CPUs Requested,CPUs Used,CPUs Efficiency,Memory Requested,Memory Used,Memory Efficiency,GPUs Used,Time,WorkingDir,Cluster,Constraints
+10829380,diamondblast_32t,1,32,type=,1,32,24.32,76.63,200.0,151.04,75.52,0,2000,nan,milton,Broadwell
+10829375,diamondblast_32t,1,32,type=,1,32,22.4,70.87,200.0,77.36,38.68,0,2151,nan,milton,Broadwell
+10829381,diamondblast_32t,1,32,type=,1,32,22.4,70.79,200.0,169.1,84.55,0,2171,nan,milton,Broadwell
+...
+```
 
 ## How it works
 The user have two prepare two files
