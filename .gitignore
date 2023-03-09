@@ -2,7 +2,7 @@
 Notebooks/*.out
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
+**__pycache__/
 *.py[cod]
 *$py.class
 
@@ -133,3 +133,4 @@ dmypy.json
 .vscode/extensions.json
 .gitignore
 ToolParametriser/ToolParametriser.code-workspace
+**.vscode/
