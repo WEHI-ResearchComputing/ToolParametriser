@@ -8,7 +8,6 @@ When running a new tool on a HPC, researchers find it challenging to chose the r
 ```
 pip install git+ssh://git@github.com/WEHI-ResearchComputing/ToolParametriser.git
 ```
-Note that this repository is privaten and installation needs read permissions.
 
 Example configuration files are located in the [examples](https://github.com/WEHI-ResearchComputing/ToolParametriser/tree/main/examples) directory of this repo.
 
