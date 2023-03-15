@@ -27,15 +27,17 @@ def main(args=None):
         with open(args.config_path, "rb") as f:
             config = tomllib.load(f)
     except IOError as e:
-            if e.errno == errno.EACCES:  
+        match e.errno:
+            case errno.EACCESS:
                 logging.fatal("Config file exists, but isn't readable")
                 exit()
-            elif e.errno == errno.ENOENT:
+            case errno.ENOENT:
                 logging.fatal("Config file isn't readable because it isn't there")
                 exit()
-            else:
+            case _:
                 logging.fatal(f"Config file error: {str(e)}")
                 exit()
+    
     if args.dryrun is not None:
         config["dryrun"]=args.dryrun
     else:config["dryrun"]= False
