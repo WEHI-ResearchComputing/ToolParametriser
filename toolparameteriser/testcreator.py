@@ -37,10 +37,13 @@ class AbstractTester(ABC):
             logging.debug("Completed job list, {f}, created successfully.".format(f=self.jobs_completed_file))
         else:
             logging.debug("Completed job list, {f}, exists. Not creating.".format(f=self.jobs_completed_file))    
-                    
+        
+        # Creating sub output directory
         if self._validate_config():
             self.Config["Output_path"] = os.path.join(config['output']['path'],config['jobs']['tool_type']+"_"+datetime.now().strftime('%Y%m%d%H%M%S'))
+            logging.debug("Run-specific output path, {p}, creating.".format(p=self.Config["Output_path"]))
             os.makedirs(self.Config["Output_path"])
+            logging.debug("Run-specific output path, {p}, created successfully.")
             if self._validate_test_parameters():
                 self._get_test_parameters()
             else:
@@ -114,25 +117,29 @@ class AbstractTester(ABC):
                 exit()
     
     def __prepare_run_dir(self,runID:str,params:dict) -> str:
+
+        logging.info("Preparing output directory for {id}.".format(id=runID))
         outpath=os.path.join(self.Config["Output_path"],runID)
         os.makedirs(outpath)
+        logging.debug("Output directory, {p}, created successfully.".format(p=outpath))
 
         # testing if user has specified 
         try:
             allinputfiles = glob.glob(self.Config['input']['path'], recursive=False)
         except KeyError:
             # below commented statemnt should be placed in a "pre-screening" function
-            # logging.info('"Input" not specified in config toml file. Not copying files to output directory.')
+            logging.info('"Input" not specified in config toml file. Not copying files to output directory.')
             return outpath
 
-        try:
-            if "numfiles" in params.keys(): 
-                runfiles = random.sample(allinputfiles, k=int(params["numfiles"]))
-            else:
-                runfiles = random.sample(allinputfiles, k=int(self.Config["jobs"]["numfiles"]))
-        except KeyError:
-            logging.fatal('"numfiles" parameter not provided in either config TOML or profiles CSV files.')
-            raise KeyError
+        if "numfiles" in params.keys(): 
+            runfiles = random.sample(allinputfiles, k=int(params["numfiles"]))
+        elif "numfiles" in self.Config["jobs"].keys():
+            runfiles = random.sample(allinputfiles, k=int(self.Config["jobs"]["numfiles"]))
+        else:
+            logging.fatal('"numfiles" parameter not supplied in either the config or job parameters files.')
+            exit()
+
+        logging.info("The following files will be copied to the input directory: \n${fs}".format(fs=runfiles))
 
         for runfile in runfiles:
             name_of_folder = runfile.split("/")[-1]
@@ -142,9 +149,14 @@ class AbstractTester(ABC):
                             dirs_exist_ok=True)
             except NotADirectoryError:
                 shutil.copy(runfile, os.path.join(outpath,name_of_folder))
+            logging.debug("Successfully copied {rf} to {p}.".format(rf=runfile, p=os.path.join(outpath,name_of_folder)))
+
         if "extra" in self.Config:
             for extrafile in self.Config["extra"]:
                 shutil.copy(extrafile["path"],outpath)
+                logging.debug("Successfully copied {rf} to {p}.".format(rf=extrafile["path"], p=outpath))
+
+        logging.info("Successfully copied files to input directory.")
         
         return outpath
 
@@ -348,7 +360,9 @@ class FromCMDTester(AbstractTester):
         super().__init__(config)
         self.tmplfile="Generictemplate.tmpl"
     def  _create_jobscript_template(self,**kwargs):
-        with open(os.path.join(self.Config["Output_path"],self.tmplfile), "w+") as fb:
+        tmplpath = os.path.join(self.Config["Output_path"],self.tmplfile)
+        logging.info("Writing sbatch job template to {p}.".format(p=tmplpath))
+        with open(tmplpath, "w+") as fb:
             fb.writelines("#!/bin/bash\n")
             fb.writelines("#SBATCH -p ${partition}\n")
             fb.writelines("#SBATCH --job-name=${jobname}\n")
@@ -370,6 +384,7 @@ class FromCMDTester(AbstractTester):
             fb.writelines(
                 'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${qos},${constraints},${workingdir},type=${type}\" >> '+f'{self.jobs_completed_file}\n'
             )
+        logging.debug("Successfully wrote sbatch job templte, {p}.".format(p=tmplpath))
     
     def _run_job(self,runID,parameters,work_dir):
         
