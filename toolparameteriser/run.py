@@ -13,8 +13,8 @@ def main(args=None):
         parser = argparse.ArgumentParser(description='Run/analyse a tool test')
         parser.add_argument('-c','--config_path', metavar='path', required=True,
                             help='the path to configuration file')
-        parser.add_argument('-D','--dryrun', metavar="bool", required=False,
-                           help='if true jobs will not run')
+        parser.add_argument('-D','--dryrun', required=False, default = False, action = 'store_true', 
+                           help='if present jobs will not run')
         parser.add_argument('-R','--runtype', metavar="str", required=True,
                            help='can be either [run, analyse]')
                            
@@ -24,7 +24,7 @@ def main(args=None):
         with open(args.config_path, "rb") as f:
             config = tomllib.load(f)
             logging.info("Successfully parsed config file, {fname}".format(fname=args.config_path))
-            
+
     except IOError as e:
         match e.errno:
             case errno.EACCES:
@@ -37,9 +37,7 @@ def main(args=None):
                 logging.fatal(f"Config file error: {str(e)}")
                 exit()
     
-    if args.dryrun is not None:
-        config["dryrun"]=args.dryrun
-    else:config["dryrun"]= False
+    config["dryrun"] = args.dryrun
 
     if args.runtype.lower()=="run":
         match config["jobs"]["tool_type"].lower():
