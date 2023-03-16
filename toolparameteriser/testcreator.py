@@ -62,7 +62,7 @@ class AbstractTester(ABC):
 
         # initialise parameters with config job parameters
         params = config["jobs"]
-        params["workdif"]=work_dir
+        params["workdir"]=work_dir
         # join with job profile parameters (job profile takes precedence)
         params.update(parameters)
 
@@ -75,19 +75,31 @@ class AbstractTester(ABC):
         return params
 
     def _run_job(self,parameters:dict,runID:str,work_dir:str):
+
         #Prepare values for tmpl
+        logging.debug("Preparing parameters for job template.")
         params=self._get_tmpl_values(parameters,work_dir) 
+        logging.debug("Successfully prepared job parameters.")
+
         #Substitute Tmpl 
+        logging.debug("Inserting job parameters into job template.")
         with open(os.path.join(self.Config["Output_path"],self.tmplfile), 'r') as f:
             template = Template(f.read())
             result = template.safe_substitute(params)
+        logging.debug("Successfully inserted job parameters into job template.")
+
         #Save to file
-        with open(os.path.join(self.Config["Output_path"],runID,"batch.slurm"), 'w') as f:
+        scriptdir = os.path.join(self.Config["Output_path"],runID)
+        scriptpath = os.path.join(self.Config["Output_path"],runID,"batch.slurm")
+        with open(scriptpath, 'w') as f:
             f.write(result)
+        logging.info(f"Saved job script to {scriptpath}.")
+
         #RUN if not dryrun
-        if not self.Config["dryrun"]:
-                os.system(f"cd {os.path.join(self.Config['Output_path'],runID)};"+ 
-                    f"sbatch {os.path.join(self.Config['Output_path'],runID,'batch.slurm')}")
+        if self.Config["dryrun"]:
+            logging.info(f"cd {scriptdir} && " + f"sbatch {scriptpath}")
+        else:
+            os.system(f"cd {scriptdir} && " + f"sbatch {scriptpath}")
            
     ##TODO validate_config
     def _validate_config(self)->bool:
