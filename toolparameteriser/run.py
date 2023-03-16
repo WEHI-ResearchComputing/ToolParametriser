@@ -47,6 +47,8 @@ def main(args=None):
                 test=toolparameteriser.testcreator.MQTester(config=config) 
             case _:
                 test=toolparameteriser.testcreator.FromCMDTester(config=config)
+
+        logging.info("Beginning run.....")
         test.run_test()
 
     elif args.runtype.lower()=="analyse":
@@ -57,7 +59,6 @@ def main(args=None):
         toolparameteriser.testresults.get(completed_jobs=jobs_completed_file,results_path=config['output']['results_file'])
     else:
         logging.fatal("Run Type (-R) Unkown, valid values include [run, analyse]")
-
 
 if __name__ == "__main__":
     

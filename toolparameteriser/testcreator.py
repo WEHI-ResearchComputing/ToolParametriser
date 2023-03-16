@@ -13,14 +13,28 @@ class AbstractTester(ABC):
         super().__init__()
         self.tmplfile="" #Must be set by concrete class
         self.Config=config
-        
-        self.jobs_completed_file=os.path.join(self.Config['output']['path'],"jobs_completed.csv")
+
+        # Creating output directory
+        logging.debug("Checking if output path, {p}, exists.".format(p=self.Config['output']['path']))
         if not os.path.exists(self.Config['output']['path']):
+            logging.debug("Output path, {p}, does not exist. Creating.".format(p=self.Config['output']['path']))
             os.makedirs(self.Config['output']['path'])
+            logging.debug("Output path, {p}, created succesfully.".format(p=self.Config['output']['path']))
+        else:
+            logging.debug("Output path, {p}, exists. Not creating.".format(p=self.Config['output']['path']))
+
+        # Initializing completed job list
+        self.jobs_completed_file=os.path.join(self.Config['output']['path'],"jobs_completed.csv")
+        logging.info("Completed list of jobs will be written to {f}.".format(f=self.jobs_completed_file))
+        logging.debug("Checking if completed job list, {f}, exists.".format(f=self.jobs_completed_file))
         if not os.path.exists(self.jobs_completed_file):
+            logging.debug("Completed job list, {f}, does not exists. Creating.".format(f=self.jobs_completed_file))
             with open(self.jobs_completed_file,'w+') as f:
                     writer = csv.writer(f)
                     writer.writerow(["jobtype","jobid","partition","numfiles","cpuspertask","mem","threads","timelimit","qos","constraints","workingdir","extra"])
+            logging.debug("Completed job list, {f}, created successfully.".format(f=self.jobs_completed_file))
+        else:
+            logging.debug("Completed job list, {f}, exists. Not creating.".format(f=self.jobs_completed_file))    
                     
         if self._validate_config():
             self.Config["Output_path"] = os.path.join(config['output']['path'],config['jobs']['tool_type']+"_"+datetime.now().strftime('%Y%m%d%H%M%S'))
