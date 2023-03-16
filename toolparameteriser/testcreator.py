@@ -6,13 +6,15 @@ import logging,glob,shutil,errno
 from string import Template
 import xml.etree.ElementTree as ET
 import toolparameteriser.utils
-toolparameteriser.utils.setlogging()
+# 
 
 class AbstractTester(ABC):
     def __init__(self,config:dict) -> None:
         super().__init__()
         self.tmplfile="" #Must be set by concrete class
         self.Config=config
+
+        toolparameteriser.utils.setlogging(self.Config["debug"])
 
         # Creating output directory
         logging.debug("Checking if output path, {p}, exists.".format(p=self.Config['output']['path']))

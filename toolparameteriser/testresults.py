@@ -3,6 +3,7 @@ import os
 import subprocess
 import pandas as pd
 import logging,csv,math
+import toolparameteriser.utils
 
 def clean(dct):
     if "Nodes" not in dct:
@@ -52,7 +53,10 @@ def clean(dct):
     return dct
 
 
-def get(completed_jobs:str,results_path,use_GPUs:bool=True):
+def get(completed_jobs:str,results_path,use_GPUs:bool=True,debug:bool=False):
+
+    toolparameteriser.utils.setlogging(debug)
+    
     allresults=[]
     failed=[]
     '''
@@ -60,6 +64,7 @@ def get(completed_jobs:str,results_path,use_GPUs:bool=True):
     Output: JobId,JobType,NumFiles,Threads,Extra,Nodes,CPUs Requested,CPUs Used,CPUs Efficiency,Memory Requested,
             Memory Used,Memory Efficiency,GPUs Used,Time,WorkingDir,Cluster,Constraints
     '''
+
     jobs=pd.read_csv(completed_jobs,index_col=False)
     #Get job ids
     #jobids=",".join(map(str,pd.read_csv(executed_jobs,header=None)[0].tolist()))

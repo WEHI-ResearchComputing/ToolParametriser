@@ -5,7 +5,6 @@ import toolparameteriser.utils
 import tomllib
 import logging,os
 import argparse
-toolparameteriser.utils.setlogging()
 
 def main(args=None):
 
@@ -17,8 +16,13 @@ def main(args=None):
                            help='if present jobs will not run')
         parser.add_argument('-R','--runtype', metavar="str", required=True,
                            help='can be either [run, analyse]')
+        parser.add_argument('-d','--debug', required=False, default=False, action='store_true',
+                            help='Sets logging level to Debug')
                            
         args = parser.parse_args()
+
+        toolparameteriser.utils.setlogging(args.debug)
+        logging.debug("Running with Debug info.")
 
     try:           
         with open(args.config_path, "rb") as f:
@@ -38,6 +42,7 @@ def main(args=None):
                 exit()
     
     config["dryrun"] = args.dryrun
+    config["debug"] = args.debug
 
     if args.runtype.lower()=="run":
         match config["jobs"]["tool_type"].lower():
@@ -56,7 +61,7 @@ def main(args=None):
         jobs_completed_file=config['output']['jobs_details_path']
         if 'results_file' not in config['output']:
             config['output']['result_file']="./allresults.csv"
-        toolparameteriser.testresults.get(completed_jobs=jobs_completed_file,results_path=config['output']['results_file'])
+        toolparameteriser.testresults.get(completed_jobs=jobs_completed_file,results_path=config['output']['results_file'],debug=config["debug"])
     else:
         logging.fatal("Run Type (-R) Unkown, valid values include [run, analyse]")
 
