@@ -19,20 +19,19 @@ def main(args=None):
                            help='can be either [run, analyse]')
                            
         args = parser.parse_args()
-    
-    if not os.path.exists(args.config_path):
-        logging.fatal("Config file does not exit")
-        exit() 
+
     try:           
         with open(args.config_path, "rb") as f:
             config = tomllib.load(f)
+            logging.info("Successfully parsed config file, {fname}".format(fname=args.config_path))
+            
     except IOError as e:
         match e.errno:
-            case errno.EACCESS:
-                logging.fatal("Config file exists, but isn't readable")
+            case errno.EACCES:
+                logging.fatal("Config file, {fname} exists, but isn't readable".format(fname=args.config_path))
                 exit()
             case errno.ENOENT:
-                logging.fatal("Config file isn't readable because it isn't there")
+                logging.fatal("Config file, {fname} isn't readable because it isn't there".format(fname=args.config_path))
                 exit()
             case _:
                 logging.fatal(f"Config file error: {str(e)}")
