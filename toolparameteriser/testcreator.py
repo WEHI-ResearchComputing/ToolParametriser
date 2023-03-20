@@ -144,17 +144,20 @@ class AbstractTester(ABC):
             return outpath
 
         if "numfiles" in params.keys(): 
-            runfiles = random.sample(allinputfiles, k=int(params["numfiles"]))
+            numfiles = int(params["numfiles"])
         elif "numfiles" in self.Config["jobs"].keys():
-            runfiles = random.sample(allinputfiles, k=int(self.Config["jobs"]["numfiles"]))
+            numfiles = int(self.Config["jobs"]["numfiles"])
         else:
             logging.fatal('"numfiles" parameter not supplied in either the config or job parameters files.')
             exit()
 
-        logging.info("The following files will be copied to the input directory: \n${fs}".format(fs=runfiles))
+        runfiles = random.sample(allinputfiles, k=numfiles)
+
+        logging.info(f"{numfiles} files are being copied to the input directory.")
 
         for runfile in runfiles:
             name_of_folder = runfile.split("/")[-1]
+            logging.debug("Copying {rf} to {p}.".format(rf=runfile, p=os.path.join(outpath,name_of_folder)))
             try:
                 shutil.copytree(runfile, 
                             os.path.join(outpath,name_of_folder), 
@@ -304,9 +307,6 @@ class DiaNNTester(AbstractTester):
 
     def _create_jobscript_template(self,**kwargs):
 
-
-
-
         with open(os.path.join(self.Config["Output_path"],self.tmplfile), "w+") as fb:
             fb.writelines("#!/bin/bash\n")
             fb.writelines("#SBATCH -p ${partition}\n")
@@ -411,9 +411,6 @@ class FromCMDTester(AbstractTester):
                 if "name" in mod:
                     modules_str+=f"module load {mod['name']}\n"
         return modules_str
-
-
-
 
     '''Overriding get_tmpl_values'''   
     def _get_tmpl_values(self,parameters:dict,work_dir:str)->dict:

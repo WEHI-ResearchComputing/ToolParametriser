@@ -3,7 +3,7 @@ import logging,sys,os
 def setlogging(debug=False):
     if not os.path.exists(f'{os.path.expanduser("~")}/.toolparameteriser/'):
         os.makedirs(f'{os.path.expanduser("~")}/.toolparameteriser/')
-    FORMAT = '[%(asctime)s]|%(levelname)s|%(name)s|%(message)s'
+    FORMAT = ' %(asctime)s | %(levelname)-8s | %(name)s | %(message)s'
 
     if debug:
         level = logging.DEBUG
