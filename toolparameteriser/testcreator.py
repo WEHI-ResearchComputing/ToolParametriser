@@ -15,33 +15,35 @@ class AbstractTester(ABC):
         self.Config=config
 
         # Creating output directory
+        outpath = self.Config['output']['path']
         logging.debug(f"Checking if output path, {self.Config['output']['path']}, exists.")
         if not os.path.exists(self.Config['output']['path']):
-            logging.debug("Output path, {p}, does not exist. Creating.".format(p=self.Config['output']['path']))
+            logging.debug(f"Output path, {outpath}, does not exist. Creating.")
             os.makedirs(self.Config['output']['path'])
-            logging.debug("Output path, {p}, created succesfully.".format(p=self.Config['output']['path']))
+            logging.debug(f"Output path, {outpath}, created succesfully.")
         else:
-            logging.debug("Output path, {p}, exists. Not creating.".format(p=self.Config['output']['path']))
+            logging.debug(f"Output path, {outpath}, exists. Not creating.")
 
         # Initializing completed job list
         self.jobs_completed_file=os.path.join(self.Config['output']['path'],"jobs_completed.csv")
-        logging.info("Completed list of jobs will be written to {f}.".format(f=self.jobs_completed_file))
-        logging.debug("Checking if completed job list, {f}, exists.".format(f=self.jobs_completed_file))
+        logging.info(f"Completed list of jobs will be written to {self.jobs_completed_file}.")
+        logging.debug(f"Checking if completed job list, {self.jobs_completed_file}, exists.")
         if not os.path.exists(self.jobs_completed_file):
-            logging.debug("Completed job list, {f}, does not exists. Creating.".format(f=self.jobs_completed_file))
+            logging.debug(f"Completed job list, {self.jobs_completed_file}, does not exists. Creating.")
             with open(self.jobs_completed_file,'w+') as f:
                     writer = csv.writer(f)
                     writer.writerow(["jobtype","jobid","partition","numfiles","cpuspertask","mem","threads","timelimit","qos","constraints","workingdir","extra"])
-            logging.debug("Completed job list, {f}, created successfully.".format(f=self.jobs_completed_file))
+            logging.debug(f"Completed job list, {self.jobs_completed_file}, created successfully.")
         else:
-            logging.debug("Completed job list, {f}, exists. Not creating.".format(f=self.jobs_completed_file))    
+            logging.debug(f"Completed job list, {self.jobs_completed_file}, exists. Not creating.")    
         
         # Creating sub output directory
         if self._validate_config():
-            self.Config["Output_path"] = os.path.join(config['output']['path'],config['jobs']['tool_type']+"_"+datetime.now().strftime('%Y%m%d%H%M%S'))
-            logging.debug("Run-specific output path, {p}, creating.".format(p=self.Config["Output_path"]))
+            runoutpath = os.path.join(config['output']['path'],config['jobs']['tool_type']+"_"+datetime.now().strftime('%Y%m%d%H%M%S'))
+            self.Config["Output_path"] = runoutpath
+            logging.debug(f"Run-specific output path, {runoutpath}, creating.")
             os.makedirs(self.Config["Output_path"])
-            logging.debug("Run-specific output path, {p}, created successfully.".format(p=self.Config["Output_path"]))
+            logging.debug(f"Run-specific output path, {runoutpath}, created successfully.")
             if self._validate_test_parameters():
                 self._get_test_parameters()
             else:
@@ -272,12 +274,12 @@ class MQTester(AbstractTester):
 
 class InvalidConfigObject(Exception):
     "Raised when config object is not valid, or have missing fields"
-    def __init__(self, message="Config object or Job parameters object is not valid, or have missing fields. See logs in ~/.toolparametriser/"):
+    def __init__(self, message="Config object or Job parameters object is not valid, or have missing fields. See logs in ~/.toolparameteriser/"):
         self.message = message
         super().__init__(self.message)
 class InvalidTestParameters(Exception):
     "Raised when Test Parameters file is not valid, or have missing fields"
-    def __init__(self, message="Test Parameters file is not valid, or have missing fields. See logs in ~/.toolparametriser/"):
+    def __init__(self, message="Test Parameters file is not valid, or have missing fields. See logs in ~/.toolparameteriser/"):
         self.message = message
         super().__init__(self.message)
 
@@ -395,7 +397,7 @@ class FromCMDTester(AbstractTester):
             fb.writelines(
                 'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${qos},${constraints},${workingdir},type=${type}\" >> '+f'{self.jobs_completed_file}\n'
             )
-        logging.debug("Successfully wrote sbatch job templte, {p}.".format(p=tmplpath))
+        logging.debug(f"Successfully wrote sbatch job templte, {tmplpath}.")
     
     def _run_job(self,runID,parameters,work_dir):
         

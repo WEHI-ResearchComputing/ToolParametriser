@@ -27,15 +27,15 @@ def main(args=None):
     try:           
         with open(args.config_path, "rb") as f:
             config = tomllib.load(f)
-            logging.info("Successfully parsed config file, {fname}".format(fname=args.config_path))
+            logging.info(f"Successfully parsed config file, {args.config_path}")
 
     except IOError as e:
         match e.errno:
             case errno.EACCES:
-                logging.fatal("Config file, {fname} exists, but isn't readable".format(fname=args.config_path))
+                logging.fatal(f"Config file, {args.config_path} exists, but isn't readable")
                 exit()
             case errno.ENOENT:
-                logging.fatal("Config file, {fname} isn't readable because it isn't there".format(fname=args.config_path))
+                logging.fatal(f"Config file, {args.config_path} isn't readable because it isn't there")
                 exit()
             case _:
                 logging.fatal(f"Config file error: {str(e)}")
