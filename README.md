@@ -22,6 +22,23 @@ Test config file examples are found in `examples`
 * ONT guppy `configONTGuppy.toml`
 * ONT guppy "real" parameter run-time parameter scan `configONTGuppy-fullscan.toml`
 
+### Extra run options
+```
+$ toolparameteriser --help
+usage: toolparameteriser [-h] -c path [-D] -R str [-d]
+
+Run/analyse a tool test
+
+options:
+  -h, --help            show this help message and exit
+  -c path, --config_path path
+                        the path to configuration file
+  -D, --dryrun          if present jobs will not run
+  -R str, --runtype str
+                        can be either [run, analyse]
+  -d, --debug           Sets logging level to Debug
+```
+
 ## To collect test results
 
 Another config file needs to be created with the `[output]` table and the `jobs_details_path` and `results_file` keys. For example, `configAnalysis.toml` in [the examples directory](https://github.com/WEHI-ResearchComputing/ToolParametriser/blob/main/examples/configAnalysis.toml):
