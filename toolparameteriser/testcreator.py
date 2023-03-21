@@ -14,8 +14,6 @@ class AbstractTester(ABC):
         self.tmplfile="" #Must be set by concrete class
         self.Config=config
 
-        toolparameteriser.utils.setlogging(self.Config["debug"])
-
         # Creating output directory
         logging.debug(f"Checking if output path, {self.Config['output']['path']}, exists.")
         if not os.path.exists(self.Config['output']['path']):

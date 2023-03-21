@@ -54,8 +54,6 @@ def clean(dct):
 
 
 def get(completed_jobs:str,results_path,use_GPUs:bool=True,debug:bool=False):
-
-    toolparameteriser.utils.setlogging(debug)
     
     allresults=[]
     failed=[]
