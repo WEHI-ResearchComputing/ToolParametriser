@@ -6,6 +6,7 @@ import logging,glob,shutil,errno
 from string import Template
 import xml.etree.ElementTree as ET
 import toolparameteriser.utils
+import subprocess
 # 
 
 class AbstractTester(ABC):
@@ -97,9 +98,11 @@ class AbstractTester(ABC):
 
         #RUN if not dryrun
         if self.Config["dryrun"]:
-            logging.info(f"cd {scriptdir} && " + f"sbatch {scriptpath}")
+            logging.info(f"sbatch --chdir={scriptdir} {scriptpath}")
         else:
-            os.system(f"cd {scriptdir} && " + f"sbatch {scriptpath}")
+            # os.system(f"cd {scriptdir} && " + f"sbatch {scriptpath}")
+            msg = subprocess.check_output(["sbatch", f"--chdir={scriptdir}", scriptpath], stderr=subprocess.STDOUT)
+            logging.info(msg)
            
     ##TODO validate_config
     def _validate_config(self)->bool:
