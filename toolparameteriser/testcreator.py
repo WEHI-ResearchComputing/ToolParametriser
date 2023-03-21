@@ -96,11 +96,11 @@ class AbstractTester(ABC):
         logging.info(f"Saved job script to {scriptpath}.")
 
         #RUN if not dryrun
-        cmd = ["sbatch", f"--chdir={scriptdir}", scriptpath]
+        cmd = ["sbatch", f"--chdir={scriptdir}", "potato", scriptpath]
         if self.Config["dryrun"]:
             logging.info(' '.join(cmd))
         else:
-            msg = subprocess.run(cmd, check=True, stdout=subprocess.PIPE).stdout
+            msg = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
             logging.info(msg)
            
     ##TODO validate_config
