@@ -16,7 +16,7 @@ class AbstractTester(ABC):
 
         # Creating output directory
         outpath = self.Config['output']['path']
-        logging.debug(f"Checking if output path, {self.Config['output']['path']}, exists.")
+        logging.debug(f"Checking if output path, {outpath}, exists.")
         if not os.path.exists(self.Config['output']['path']):
             logging.debug(f"Output path, {outpath}, does not exist. Creating.")
             os.makedirs(self.Config['output']['path'])
@@ -25,11 +25,11 @@ class AbstractTester(ABC):
             logging.debug(f"Output path, {outpath}, exists. Not creating.")
 
         # Initializing completed job list
-        self.jobs_completed_file=os.path.join(self.Config['output']['path'],"jobs_completed.csv")
+        self.jobs_completed_file=os.path.join(outpath, "jobs_completed.csv")
         logging.info(f"Completed list of jobs will be written to {self.jobs_completed_file}.")
         logging.debug(f"Checking if completed job list, {self.jobs_completed_file}, exists.")
         if not os.path.exists(self.jobs_completed_file):
-            logging.debug(f"Completed job list, {self.jobs_completed_file}, does not exists. Creating.")
+            logging.debug(f"Completed job list, {self.jobs_completed_file}, does not exist. Creating.")
             with open(self.jobs_completed_file,'w+') as f:
                     writer = csv.writer(f)
                     writer.writerow(["jobtype","jobid","partition","numfiles","cpuspertask","mem","threads","timelimit","qos","constraints","workingdir","extra"])
@@ -132,7 +132,7 @@ class AbstractTester(ABC):
     
     def __prepare_run_dir(self,runID:str,params:dict) -> str:
 
-        logging.info("Preparing output directory for {id}.".format(id=runID))
+        logging.info(f"Preparing output directory for {runID}.")
         outpath=os.path.join(self.Config["Output_path"],runID)
         os.makedirs(outpath)
         logging.debug("Output directory, {p}, created successfully.".format(p=outpath))
