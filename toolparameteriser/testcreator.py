@@ -6,25 +6,44 @@ import logging,glob,shutil,errno
 from string import Template
 import xml.etree.ElementTree as ET
 import toolparameteriser.utils
-toolparameteriser.utils.setlogging()
+import subprocess
 
 class AbstractTester(ABC):
     def __init__(self,config:dict) -> None:
         super().__init__()
         self.tmplfile="" #Must be set by concrete class
         self.Config=config
-        
-        self.jobs_completed_file=os.path.join(self.Config['output']['path'],"jobs_completed.csv")
+
+        # Creating output directory
+        outpath = self.Config['output']['path']
+        logging.debug(f"Checking if output path, {outpath}, exists.")
         if not os.path.exists(self.Config['output']['path']):
+            logging.debug(f"Output path, {outpath}, does not exist. Creating.")
             os.makedirs(self.Config['output']['path'])
+            logging.debug(f"Output path, {outpath}, created succesfully.")
+        else:
+            logging.debug(f"Output path, {outpath}, exists. Not creating.")
+
+        # Initializing completed job list
+        self.jobs_completed_file=os.path.join(outpath, "jobs_completed.csv")
+        logging.info(f"Completed list of jobs will be written to {self.jobs_completed_file}.")
+        logging.debug(f"Checking if completed job list, {self.jobs_completed_file}, exists.")
         if not os.path.exists(self.jobs_completed_file):
+            logging.debug(f"Completed job list, {self.jobs_completed_file}, does not exist. Creating.")
             with open(self.jobs_completed_file,'w+') as f:
                     writer = csv.writer(f)
                     writer.writerow(["jobtype","jobid","partition","numfiles","cpuspertask","mem","threads","timelimit","qos","constraints","workingdir","extra"])
-                    
+            logging.debug(f"Completed job list, {self.jobs_completed_file}, created successfully.")
+        else:
+            logging.debug(f"Completed job list, {self.jobs_completed_file}, exists. Not creating.")    
+        
+        # Creating sub output directory
         if self._validate_config():
-            self.Config["Output_path"] = os.path.join(config['output']['path'],config['jobs']['tool_type']+"_"+datetime.now().strftime('%Y%m%d%H%M%S'))
+            runoutpath = os.path.join(config['output']['path'],config['jobs']['tool_type']+"_"+datetime.now().strftime('%Y%m%d%H%M%S'))
+            self.Config["Output_path"] = runoutpath
+            logging.debug(f"Run-specific output path, {runoutpath}, creating.")
             os.makedirs(self.Config["Output_path"])
+            logging.debug(f"Run-specific output path, {runoutpath}, created successfully.")
             if self._validate_test_parameters():
                 self._get_test_parameters()
             else:
@@ -43,7 +62,7 @@ class AbstractTester(ABC):
 
         # initialise parameters with config job parameters
         params = config["jobs"]
-        params["workdif"]=work_dir
+        params["workdir"]=work_dir
         # join with job profile parameters (job profile takes precedence)
         params.update(parameters)
 
@@ -56,19 +75,33 @@ class AbstractTester(ABC):
         return params
 
     def _run_job(self,parameters:dict,runID:str,work_dir:str):
+
         #Prepare values for tmpl
+        logging.debug("Preparing parameters for job template.")
         params=self._get_tmpl_values(parameters,work_dir) 
+        logging.debug("Successfully prepared job parameters.")
+
         #Substitute Tmpl 
+        logging.debug("Inserting job parameters into job template.")
         with open(os.path.join(self.Config["Output_path"],self.tmplfile), 'r') as f:
             template = Template(f.read())
             result = template.safe_substitute(params)
+        logging.debug("Successfully inserted job parameters into job template.")
+
         #Save to file
-        with open(os.path.join(self.Config["Output_path"],runID,"batch.slurm"), 'w') as f:
+        scriptdir = os.path.join(self.Config["Output_path"],runID)
+        scriptpath = os.path.join(self.Config["Output_path"],runID,"batch.slurm")
+        with open(scriptpath, 'w') as f:
             f.write(result)
+        logging.info(f"Saved job script to {scriptpath}.")
+
         #RUN if not dryrun
-        if not self.Config["dryrun"]:
-                os.system(f"cd {os.path.join(self.Config['Output_path'],runID)};"+ 
-                    f"sbatch {os.path.join(self.Config['Output_path'],runID,'batch.slurm')}")
+        cmd = ["sbatch", f"--chdir={scriptdir}", scriptpath]
+        if self.Config["dryrun"]:
+            logging.info(' '.join(cmd))
+        else:
+            msg = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+            logging.info(msg)
            
     ##TODO validate_config
     def _validate_config(self)->bool:
@@ -98,37 +131,51 @@ class AbstractTester(ABC):
                 exit()
     
     def __prepare_run_dir(self,runID:str,params:dict) -> str:
+
+        logging.info(f"Preparing output directory for {runID}.")
         outpath=os.path.join(self.Config["Output_path"],runID)
         os.makedirs(outpath)
+        logging.debug(f"Output directory, {outpath}, created successfully.")
 
         # testing if user has specified 
         try:
             allinputfiles = glob.glob(self.Config['input']['path'], recursive=False)
         except KeyError:
             # below commented statemnt should be placed in a "pre-screening" function
-            # logging.info('"Input" not specified in config toml file. Not copying files to output directory.')
+            logging.info('"Input" not specified in config toml file. Not copying files to output directory.')
             return outpath
 
-        try:
-            if "numfiles" in params.keys(): 
-                runfiles = random.sample(allinputfiles, k=int(params["numfiles"]))
-            else:
-                runfiles = random.sample(allinputfiles, k=int(self.Config["jobs"]["numfiles"]))
-        except KeyError:
-            logging.fatal('"numfiles" parameter not provided in either config TOML or profiles CSV files.')
-            raise KeyError
+        if "numfiles" in params.keys(): 
+            numfiles = int(params["numfiles"])
+        elif "numfiles" in self.Config["jobs"].keys():
+            numfiles = int(self.Config["jobs"]["numfiles"])
+        else:
+            logging.fatal('"numfiles" parameter not supplied in either the config or job parameters files.')
+            exit()
+
+        runfiles = random.sample(allinputfiles, k=numfiles)
+
+        logging.info(f"{numfiles} files are being copied to the input directory.")
 
         for runfile in runfiles:
             name_of_folder = runfile.split("/")[-1]
+            runfile_dest = os.path.join(outpath,name_of_folder)
+            logging.debug(f"Copying {runfile} to {runfile_dest}.")
             try:
                 shutil.copytree(runfile, 
                             os.path.join(outpath,name_of_folder), 
                             dirs_exist_ok=True)
             except NotADirectoryError:
                 shutil.copy(runfile, os.path.join(outpath,name_of_folder))
+            logging.debug(f"Successfully copied {runfile} to {runfile_dest}.")
+
         if "extra" in self.Config:
             for extrafile in self.Config["extra"]:
-                shutil.copy(extrafile["path"],outpath)
+                filetocopy = extrafile["path"]
+                shutil.copy(filetocopy,outpath)
+                logging.debug(f"Successfully copied {filetocopy} to {outpath}.")
+
+        logging.info("Successfully copied files to input directory.")
         
         return outpath
 
@@ -230,12 +277,12 @@ class MQTester(AbstractTester):
 
 class InvalidConfigObject(Exception):
     "Raised when config object is not valid, or have missing fields"
-    def __init__(self, message="Config object or Job parameters object is not valid, or have missing fields. See logs in ~/.toolparametriser/"):
+    def __init__(self, message="Config object or Job parameters object is not valid, or have missing fields. See logs in ~/.toolparameteriser/"):
         self.message = message
         super().__init__(self.message)
 class InvalidTestParameters(Exception):
     "Raised when Test Parameters file is not valid, or have missing fields"
-    def __init__(self, message="Test Parameters file is not valid, or have missing fields. See logs in ~/.toolparametriser/"):
+    def __init__(self, message="Test Parameters file is not valid, or have missing fields. See logs in ~/.toolparameteriser/"):
         self.message = message
         super().__init__(self.message)
 
@@ -263,9 +310,6 @@ class DiaNNTester(AbstractTester):
         super()._run_job(runID=runID,parameters=parameters,work_dir=work_dir)
 
     def _create_jobscript_template(self,**kwargs):
-
-
-
 
         with open(os.path.join(self.Config["Output_path"],self.tmplfile), "w+") as fb:
             fb.writelines("#!/bin/bash\n")
@@ -332,7 +376,9 @@ class FromCMDTester(AbstractTester):
         super().__init__(config)
         self.tmplfile="Generictemplate.tmpl"
     def  _create_jobscript_template(self,**kwargs):
-        with open(os.path.join(self.Config["Output_path"],self.tmplfile), "w+") as fb:
+        tmplpath = os.path.join(self.Config["Output_path"],self.tmplfile)
+        logging.info(f"Writing sbatch job template to {tmplpath}.")
+        with open(tmplpath, "w+") as fb:
             fb.writelines("#!/bin/bash\n")
             fb.writelines("#SBATCH -p ${partition}\n")
             fb.writelines("#SBATCH --job-name=${jobname}\n")
@@ -354,6 +400,7 @@ class FromCMDTester(AbstractTester):
             fb.writelines(
                 'echo \"${jobtype},$SLURM_JOB_ID,${partition},${numfiles},${cpuspertask},${mem},${threads},${timelimit},${qos},${constraints},${workingdir},type=${type}\" >> '+f'{self.jobs_completed_file}\n'
             )
+        logging.debug(f"Successfully wrote sbatch job templte, {tmplpath}.")
     
     def _run_job(self,runID,parameters,work_dir):
         
@@ -368,9 +415,6 @@ class FromCMDTester(AbstractTester):
                 if "name" in mod:
                     modules_str+=f"module load {mod['name']}\n"
         return modules_str
-
-
-
 
     '''Overriding get_tmpl_values'''   
     def _get_tmpl_values(self,parameters:dict,work_dir:str)->dict:
