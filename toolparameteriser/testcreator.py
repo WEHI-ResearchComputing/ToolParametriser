@@ -44,7 +44,7 @@ class AbstractTester(ABC):
             self.Config["Output_path"] = os.path.join(config['output']['path'],config['jobs']['tool_type']+"_"+datetime.now().strftime('%Y%m%d%H%M%S'))
             logging.debug("Run-specific output path, {p}, creating.".format(p=self.Config["Output_path"]))
             os.makedirs(self.Config["Output_path"])
-            logging.debug("Run-specific output path, {p}, created successfully.")
+            logging.debug("Run-specific output path, {p}, created successfully.".format(p=self.Config["Output_path"]))
             if self._validate_test_parameters():
                 self._get_test_parameters()
             else:
