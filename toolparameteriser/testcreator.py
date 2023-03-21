@@ -96,7 +96,7 @@ class AbstractTester(ABC):
         logging.info(f"Saved job script to {scriptpath}.")
 
         #RUN if not dryrun
-        cmd = ["sbatch", f"--chdir={scriptdir}", "potato", scriptpath]
+        cmd = ["sbatch", f"--chdir={scriptdir}", scriptpath]
         if self.Config["dryrun"]:
             logging.info(' '.join(cmd))
         else:
