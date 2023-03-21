@@ -7,7 +7,6 @@ from string import Template
 import xml.etree.ElementTree as ET
 import toolparameteriser.utils
 import subprocess
-# 
 
 class AbstractTester(ABC):
     def __init__(self,config:dict) -> None:
@@ -18,7 +17,7 @@ class AbstractTester(ABC):
         toolparameteriser.utils.setlogging(self.Config["debug"])
 
         # Creating output directory
-        logging.debug("Checking if output path, {p}, exists.".format(p=self.Config['output']['path']))
+        logging.debug(f"Checking if output path, {self.Config['output']['path']}, exists.")
         if not os.path.exists(self.Config['output']['path']):
             logging.debug("Output path, {p}, does not exist. Creating.".format(p=self.Config['output']['path']))
             os.makedirs(self.Config['output']['path'])
@@ -100,7 +99,6 @@ class AbstractTester(ABC):
         if self.Config["dryrun"]:
             logging.info(f"sbatch --chdir={scriptdir} {scriptpath}")
         else:
-            # os.system(f"cd {scriptdir} && " + f"sbatch {scriptpath}")
             msg = subprocess.check_output(["sbatch", f"--chdir={scriptdir}", scriptpath], stderr=subprocess.STDOUT)
             logging.info(msg)
            

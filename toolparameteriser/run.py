@@ -12,11 +12,11 @@ def main(args=None):
         parser = argparse.ArgumentParser(description='Run/analyse a tool test')
         parser.add_argument('-c','--config_path', metavar='path', required=True,
                             help='the path to configuration file')
-        parser.add_argument('-D','--dryrun', required=False, default = False, action = 'store_true', 
+        parser.add_argument('-D','--dryrun', action = 'store_true', 
                            help='if present jobs will not run')
         parser.add_argument('-R','--runtype', metavar="str", required=True,
                            help='can be either [run, analyse]')
-        parser.add_argument('-d','--debug', required=False, default=False, action='store_true',
+        parser.add_argument('-d','--debug', action='store_true',
                             help='Sets logging level to Debug')
                            
         args = parser.parse_args()
