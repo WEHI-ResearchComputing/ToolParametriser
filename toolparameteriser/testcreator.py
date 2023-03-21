@@ -135,7 +135,7 @@ class AbstractTester(ABC):
         logging.info(f"Preparing output directory for {runID}.")
         outpath=os.path.join(self.Config["Output_path"],runID)
         os.makedirs(outpath)
-        logging.debug("Output directory, {p}, created successfully.".format(p=outpath))
+        logging.debug(f"Output directory, {outpath}, created successfully.")
 
         # testing if user has specified 
         try:
@@ -159,19 +159,21 @@ class AbstractTester(ABC):
 
         for runfile in runfiles:
             name_of_folder = runfile.split("/")[-1]
-            logging.debug("Copying {rf} to {p}.".format(rf=runfile, p=os.path.join(outpath,name_of_folder)))
+            runfile_dest = os.path.join(outpath,name_of_folder)
+            logging.debug(f"Copying {runfile} to {runfile_dest}.")
             try:
                 shutil.copytree(runfile, 
                             os.path.join(outpath,name_of_folder), 
                             dirs_exist_ok=True)
             except NotADirectoryError:
                 shutil.copy(runfile, os.path.join(outpath,name_of_folder))
-            logging.debug("Successfully copied {rf} to {p}.".format(rf=runfile, p=os.path.join(outpath,name_of_folder)))
+            logging.debug(f"Successfully copied {runfile} to {runfile_dest}.")
 
         if "extra" in self.Config:
             for extrafile in self.Config["extra"]:
-                shutil.copy(extrafile["path"],outpath)
-                logging.debug("Successfully copied {rf} to {p}.".format(rf=extrafile["path"], p=outpath))
+                filetocopy = extrafile["path"]
+                shutil.copy(filetocopy,outpath)
+                logging.debug(f"Successfully copied {filetocopy} to {outpath}.")
 
         logging.info("Successfully copied files to input directory.")
         
@@ -375,7 +377,7 @@ class FromCMDTester(AbstractTester):
         self.tmplfile="Generictemplate.tmpl"
     def  _create_jobscript_template(self,**kwargs):
         tmplpath = os.path.join(self.Config["Output_path"],self.tmplfile)
-        logging.info("Writing sbatch job template to {p}.".format(p=tmplpath))
+        logging.info(f"Writing sbatch job template to {tmplpath}.")
         with open(tmplpath, "w+") as fb:
             fb.writelines("#!/bin/bash\n")
             fb.writelines("#SBATCH -p ${partition}\n")
