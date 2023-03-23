@@ -220,6 +220,7 @@ class MQTester(AbstractTester):
             fb.writelines("#SBATCH --qos=${qos}\n")
             fb.writelines("#SBATCH --constraint=${constraints}\n")
 
+            fb.writelines("module purge\n")
             fb.writelines("module load MaxQuant/2.0.2.0\n")
             fb.writelines("/stornext/System/data/apps/rc-tools/rc-tools-1.0/bin/tools/MQ/createMQXML.py ${threads}\n")
             fb.writelines("MaxQuant mqpar.mod.xml\n")
@@ -324,6 +325,8 @@ class DiaNNTester(AbstractTester):
             fb.writelines("#SBATCH --mail-user=${email}\n")
             fb.writelines("#SBATCH --qos=${qos}\n")
             fb.writelines("#SBATCH --constraint=${constraints}\n")
+            
+            fb.writelines("module purge\n")
             fb.writelines("module use /stornext/System/data/modulefiles/sysbio\n")
             fb.writelines("module load DiaNN/1.8\n")
             fb.writelines("diann-1.8 ")
@@ -392,6 +395,7 @@ class FromCMDTester(AbstractTester):
             fb.writelines("#SBATCH --mail-user=${email}\n")
             fb.writelines("#SBATCH --qos=${qos}\n")
             fb.writelines("#SBATCH --constraint=${constraints}\n")
+            fb.writelines("module purge\n") # don't want currently loaded modules to conflict
 
             fb.writelines("${modules}\n")
             if 'cmd' in self.Config["jobs"]:
