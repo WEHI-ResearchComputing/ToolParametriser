@@ -136,7 +136,7 @@ The following are parameters supplied to Slurm and must be included in either th
 * `mem`: the memory (in GB) to run each job with.
 * `gres`: the number of "general resources" to request. A 0 value must be supplied if not needed. e.g., `gres = "gpu:0"` must be specified if no GPUs are needed.
 * `constraint`: any constraints e.g., for Milton HPC, you can specify the microarchitecture with `constraint = "Skylake"`.
-* `environment`: a comma-delimited list of key=value pairs to be set with the `--export` option in `sbatch`. E.g., `environment = "LUNCH=sandwich,DINNER=schnitzel"`
+* `environment` (OPTIONAL): a comma-delimited list of key=value pairs to be set with the `--export` option in `sbatch`. E.g., `environment = "LUNCH=sandwich,DINNER=schnitzel"`
 
 Using the `configBWA.toml` example found in the `examples` folder:
 ```
