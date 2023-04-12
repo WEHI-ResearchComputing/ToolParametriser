@@ -66,6 +66,8 @@ class AbstractTester(ABC):
         # join with job profile parameters (job profile takes precedence)
         params.update(parameters)
 
+	if 'environment' not in params.keys():
+            params['environment'] = ""
         if 'ntasks' not in params.keys():
             params['ntasks'] = 1
 
@@ -98,7 +100,7 @@ class AbstractTester(ABC):
         
 
         #RUN if not dryrun
-        cmd = ["sbatch", f"--chdir={scriptdir}"]
+        cmd = ["sbatch", f"--chdir={scriptdir}", scriptpath]
         if "environment" in params.keys(): 
             envvars = params["environment"]
             cmd.append(f"--export={envvars}")
@@ -225,6 +227,7 @@ class MQTester(AbstractTester):
             fb.writelines("#SBATCH --mail-user=${email}\n")
             fb.writelines("#SBATCH --qos=${qos}\n")
             fb.writelines("#SBATCH --constraint=${constraints}\n")
+            fb.writelines("#SBATCH --export=${environment}\n")
 
             fb.writelines("module load MaxQuant/2.0.2.0\n")
             fb.writelines("/stornext/System/data/apps/rc-tools/rc-tools-1.0/bin/tools/MQ/createMQXML.py ${threads}\n")
@@ -330,6 +333,7 @@ class DiaNNTester(AbstractTester):
             fb.writelines("#SBATCH --mail-user=${email}\n")
             fb.writelines("#SBATCH --qos=${qos}\n")
             fb.writelines("#SBATCH --constraint=${constraints}\n")
+            fb.writelines("#SBATCH --export=${environment}\n")
             fb.writelines("module use /stornext/System/data/modulefiles/sysbio\n")
             fb.writelines("module load DiaNN/1.8\n")
             fb.writelines("diann-1.8 ")
@@ -398,6 +402,7 @@ class FromCMDTester(AbstractTester):
             fb.writelines("#SBATCH --mail-user=${email}\n")
             fb.writelines("#SBATCH --qos=${qos}\n")
             fb.writelines("#SBATCH --constraint=${constraints}\n")
+            fb.writelines("#SBATCH --export=${environment}\n")
 
             fb.writelines("${modules}\n")
             if 'cmd' in self.Config["jobs"]:
