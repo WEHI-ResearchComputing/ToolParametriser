@@ -136,17 +136,19 @@ The following are parameters supplied to Slurm and must be included in either th
 * `mem`: the memory (in GB) to run each job with.
 * `gres`: the number of "general resources" to request. A 0 value must be supplied if not needed. e.g., `gres = "gpu:0"` must be specified if no GPUs are needed.
 * `constraint`: any constraints e.g., for Milton HPC, you can specify the microarchitecture with `constraint = "Skylake"`.
+* `environment` (OPTIONAL): a comma-delimited list of key=value pairs to be set with the `--export` option in `sbatch`. E.g., `environment = "LUNCH=sandwich,DINNER=schnitzel"`
 
 Using the `configBWA.toml` example found in the `examples` folder:
 ```
 [jobs]
-cmd="bwa mem -t ${threads} -K 10000000 -R '@RG\\tID:sample_rg1\\tLB:lib1\\tPL:bar\\tSM:sample\\tPU:sample_rg1' ${reference} ${input_path} | gatk SortSam --java-options -Xmx30g --MAX_RECORDS_IN_RAM 250000 -I /dev/stdin -O out.bam --SORT_ORDER coordinate"
+cmd="bwa mem -t ${threads} -K 10000000 -R '@RG\\tID:sample_rg1\\tLB:lib1\\tPL:bar\\tSM:sample\\tPU:sample_rg1' ${reference} ${input_path} | gatk SortSam --java-options -Xmx30g --MAX_RECORDS_IN_RAM 250000 -I /dev/stdin -O out.bam --SORT_ORDER coordinate --TMPDIR $TMPDIR"
 num_reps = 1 
 params_path = "/vast/scratch/users/yang.e/ToolParametriser/examples/IGenricbenchmarking-profiles.csv" 
 tool_type="bwa"
 run_type=""
 email=""
 qos="preempt"
+environment="TMPDIR=/vast/scratch/useres/yang.e"
 ```
 
 * **List of command placeholders**

@@ -95,8 +95,14 @@ class AbstractTester(ABC):
             f.write(result)
         logging.info(f"Saved job script to {scriptpath}.")
 
+        
+
         #RUN if not dryrun
-        cmd = ["sbatch", f"--chdir={scriptdir}", scriptpath]
+        cmd = ["sbatch", f"--chdir={scriptdir}"]
+        if "environment" in params.keys(): 
+            envvars = params["environment"]
+            cmd.append(f"--export={envvars}")
+        cmd.append(scriptpath)
         if self.Config["dryrun"]:
             logging.info(' '.join(cmd))
         else:
