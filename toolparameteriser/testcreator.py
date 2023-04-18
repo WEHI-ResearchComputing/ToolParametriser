@@ -66,7 +66,7 @@ class AbstractTester(ABC):
         # join with job profile parameters (job profile takes precedence)
         params.update(parameters)
 
-	if 'environment' not in params.keys():
+        if 'environment' not in params.keys():
             params['environment'] = ""
         if 'ntasks' not in params.keys():
             params['ntasks'] = 1
