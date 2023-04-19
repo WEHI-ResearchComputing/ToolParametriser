@@ -109,11 +109,11 @@ class AbstractTester(ABC):
             logging.info(' '.join(cmd))
         else:
             try:
-                logging.info(cmd)
+                
                 msg = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
                 logging.info(msg)
             except subprocess.CalledProcessError as e :
-                logging.fatal(f"Error occures while submitting job.\n{e.output}")
+                logging.fatal(f"Error occured while submitting job.\n{e.output}")
            
     ##TODO validate_config
     def _validate_config(self)->bool:
@@ -164,7 +164,10 @@ class AbstractTester(ABC):
         else:
             logging.fatal('"numfiles" parameter not supplied in either the config or job parameters files.')
             exit()
-
+        if numfiles>len(allinputfiles):
+            logging.info(f'"numfiles" parameter is larger than number of input files available. So total number of input files {len(allinputfiles)} will be used.')
+            numfiles=len(allinputfiles)
+        
         runfiles = random.sample(allinputfiles, k=numfiles)
 
         logging.info(f"{numfiles} files are being copied to the input directory.")
