@@ -98,18 +98,22 @@ class AbstractTester(ABC):
         logging.info(f"Saved job script to {scriptpath}.")
 
         
-
         #RUN if not dryrun
         cmd = ["sbatch", f"--chdir={scriptdir}", scriptpath]
-        if "environment" in params.keys(): 
+        #Added extra check to avoid empty export
+        if "environment" in params.keys() and params["environment"] != "": 
             envvars = params["environment"]
             cmd.append(f"--export={envvars}")
-        cmd.append(scriptpath)
+        
         if self.Config["dryrun"]:
             logging.info(' '.join(cmd))
         else:
-            msg = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
-            logging.info(msg)
+            try:
+                logging.info(cmd)
+                msg = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+                logging.info(msg)
+            except subprocess.CalledProcessError as e :
+                logging.fatal(f"Error occures while submitting job.\n{e.output}")
            
     ##TODO validate_config
     def _validate_config(self)->bool:
@@ -316,6 +320,7 @@ class DiaNNTester(AbstractTester):
 
     def _run_job(self,runID,parameters,work_dir):
         parameters['inputfiles']=' --f '.join(self.__get_input_files(runID=runID))
+        
         super()._run_job(runID=runID,parameters=parameters,work_dir=work_dir)
 
     def _create_jobscript_template(self,**kwargs):
@@ -414,7 +419,6 @@ class FromCMDTester(AbstractTester):
         logging.debug(f"Successfully wrote sbatch job templte, {tmplpath}.")
     
     def _run_job(self,runID,parameters,work_dir):
-        
         super()._run_job(runID=runID,parameters=parameters,work_dir=work_dir)
 
     def _get_modules(self):
