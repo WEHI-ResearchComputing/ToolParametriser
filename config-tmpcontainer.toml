@@ -1,0 +1,22 @@
+[output]
+path = "/vast/scratch/users/yang.e/bwagatk-benchmarkme-results" 
+
+[jobs]
+cmd="${cmd}"
+num_reps = 1 
+params_path = "/vast/scratch/users/yang.e/ToolParameteriser/testsuite-profiles-ilcl-tmpcontainer.csv" 
+tool_type="bwa"
+run_type=""
+email=""
+qos="normal"
+partition="regular"
+# these will be overridden by BWA-profile2.csv
+cpuspertask=6 
+threads=4
+
+[[cmd_placeholder]]
+name="reference"
+path="/vast/projects/RCP/23-02-new-nodes-testing/bwa-gatk/bwa-test-files/Homo_sapiens_assembly38.fasta"
+[[cmd_placeholder]]
+name="input_path"
+path="/vast/projects/RCP/23-02-new-nodes-testing/bwa-gatk/bwa-test-files/samples/*"
